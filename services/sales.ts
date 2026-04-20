@@ -1,14 +1,13 @@
 import { FirebaseError } from "firebase/app";
 import {
-    collection,
-    doc,
-    getDocs,
-    limit,
-    orderBy,
-    query,
-    runTransaction,
-    serverTimestamp,
-    where,
+  collection,
+  doc,
+  getDocs,
+  limit,
+  query,
+  runTransaction,
+  serverTimestamp,
+  where,
 } from "firebase/firestore";
 
 import { firebaseDb } from "@/config/firebase";
@@ -62,7 +61,8 @@ type ProductPoolCache = {
 
 let productPoolCache: ProductPoolCache | null = null;
 
-const PRODUCT_POOL_TTL_MS = 20_000;
+const PRODUCT_POOL_TTL_MS = 4_000;
+const PRODUCT_POOL_LIMIT = 300;
 
 function makeId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
@@ -114,15 +114,16 @@ async function loadProductPool(orgId: string) {
   const productsQuery = query(
     collection(firebaseDb, "products"),
     where("org_id", "==", orgId),
-    where("is_active", "==", true),
-    orderBy("updated_at", "desc"),
-    limit(400),
+    limit(PRODUCT_POOL_LIMIT),
   );
 
   const snapshot = await getDocs(productsQuery);
-  const items = snapshot.docs.map((documentSnapshot) =>
-    mapProduct(documentSnapshot.id, documentSnapshot.data() as ProductLookupDocument),
-  );
+  const items = snapshot.docs
+    .map((documentSnapshot) =>
+      mapProduct(documentSnapshot.id, documentSnapshot.data() as ProductLookupDocument),
+    )
+    .filter((item) => item.isActive)
+    .sort((first, second) => first.name.localeCompare(second.name));
 
   productPoolCache = {
     orgId,
@@ -231,6 +232,9 @@ export async function checkoutCart(input: CheckoutInput) {
 
   try {
     await runTransaction(firebaseDb, async (transaction) => {
+      const productSnapshotsById = new Map<string, ProductLookupDocument>();
+
+      // Firestore transactions require all reads to happen before any writes.
       for (const line of input.lines) {
         const productRef = doc(firebaseDb, "products", line.productId);
         const productSnapshot = await transaction.get(productRef);
@@ -249,8 +253,16 @@ export async function checkoutCart(input: CheckoutInput) {
           throw new Error(`Product ${line.name} is inactive.`);
         }
 
-        if (productData.current_stock < line.quantity) {
-          throw new Error(`Insufficient stock for ${line.name}.`);
+        productSnapshotsById.set(line.productId, productData);
+      }
+
+      for (let index = 0; index < input.lines.length; index += 1) {
+        const line = input.lines[index];
+        const productRef = doc(firebaseDb, "products", line.productId);
+        const productData = productSnapshotsById.get(line.productId);
+
+        if (!productData) {
+          throw new Error(`Product ${line.name} is no longer available.`);
         }
 
         transaction.update(productRef, {
@@ -259,7 +271,7 @@ export async function checkoutCart(input: CheckoutInput) {
           updated_at: serverTimestamp(),
         });
 
-        const saleDocId = `${saleId}_${line.productId}`;
+        const saleDocId = `${saleId}_${line.productId}_${index}`;
         const saleRef = doc(firebaseDb, "sales", saleDocId);
 
         transaction.set(saleRef, {

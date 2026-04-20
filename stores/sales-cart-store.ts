@@ -34,6 +34,7 @@ type SalesCartState = {
   archivedCarts: SalesCart[];
   activeCartId: string;
   createCart: (clientLabel?: string) => string;
+  deleteCart: (cartId: string) => void;
   switchActiveCart: (cartId: string) => void;
   renameActiveCart: (clientLabel: string) => void;
   addProductToActiveCart: (product: ProductLookupItem, quantity?: number) => CartActionResult;
@@ -69,13 +70,6 @@ function updateLineQuantity(line: CartLine, quantity: number): CartActionResult 
     return { ok: false, message: "Quantity must be an integer greater than 0." };
   }
 
-  if (quantity > line.currentStockSnapshot) {
-    return {
-      ok: false,
-      message: `Only ${line.currentStockSnapshot} units available for ${line.name}.`,
-    };
-  }
-
   return { ok: true };
 }
 
@@ -95,6 +89,32 @@ export const useSalesCartStore = create<SalesCartState>((set, get) => ({
     }));
 
     return cart.id;
+  },
+  deleteCart: (cartId) => {
+    set((current) => {
+      const cartToDelete = current.carts.find((cart) => cart.id === cartId);
+      if (!cartToDelete) {
+        return current;
+      }
+
+      const remaining = current.carts.filter((cart) => cart.id !== cartId);
+
+      if (remaining.length === 0) {
+        const replacement = createEmptyCart(`Client ${current.archivedCarts.length + 2}`);
+
+        return {
+          carts: [replacement],
+          activeCartId: replacement.id,
+        };
+      }
+
+      const nextActiveId = current.activeCartId === cartId ? remaining[0].id : current.activeCartId;
+
+      return {
+        carts: remaining,
+        activeCartId: nextActiveId,
+      };
+    });
   },
   switchActiveCart: (cartId) => {
     set((current) => {
@@ -137,13 +157,6 @@ export const useSalesCartStore = create<SalesCartState>((set, get) => ({
 
     const existingLine = activeCart.lines.find((line) => line.productId === product.id);
     const nextQuantity = (existingLine?.quantity ?? 0) + quantity;
-
-    if (nextQuantity > product.currentStock) {
-      return {
-        ok: false,
-        message: `Only ${product.currentStock} units available for ${product.name}.`,
-      };
-    }
 
     set((current) => ({
       carts: current.carts.map((cart) => {

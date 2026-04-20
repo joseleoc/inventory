@@ -7,6 +7,7 @@ import { Drawer } from "expo-router/drawer";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { NewCartFab } from "@/components/new-cart-fab";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
@@ -60,61 +61,68 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 
 export default function TabLayout() {
   return (
-    <Drawer
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
-        headerShown: true,
-      }}>
-      <Drawer.Screen
-        name="index"
-        options={{
-          title: "Home",
-          drawerIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={24} name="house.fill" color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          drawerIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={24} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="add-product"
-        options={{
-          title: "Add Product",
-          drawerIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={24} name="plus.circle.fill" color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="sales"
-        options={{
-          title: "Sales",
-          drawerIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={24} name="cart.fill" color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="organizations"
-        options={{
-          title: "Organizations",
-          drawerIcon: ({ color }: { color: string }) => (
-            <IconSymbol size={24} name="building.2.fill" color={color} />
-          ),
-        }}
-      />
-    </Drawer>
+    <View style={styles.layoutRoot}>
+      <Drawer
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+          headerShown: true,
+        }}>
+        <Drawer.Screen
+          name="index"
+          options={{
+            title: "Home",
+            drawerIcon: ({ color }: { color: string }) => (
+              <IconSymbol size={24} name="house.fill" color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="explore"
+          options={{
+            title: "Explore",
+            drawerIcon: ({ color }: { color: string }) => (
+              <IconSymbol size={24} name="paperplane.fill" color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="add-product"
+          options={{
+            title: "Add Product",
+            drawerIcon: ({ color }: { color: string }) => (
+              <IconSymbol size={24} name="plus.circle.fill" color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="sales"
+          options={{
+            title: "Sales",
+            drawerIcon: ({ color }: { color: string }) => (
+              <IconSymbol size={24} name="cart.fill" color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="organizations"
+          options={{
+            title: "Organizations",
+            drawerIcon: ({ color }: { color: string }) => (
+              <IconSymbol size={24} name="building.2.fill" color={color} />
+            ),
+          }}
+        />
+      </Drawer>
+
+      <NewCartFab />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  layoutRoot: {
+    flex: 1,
+  },
   drawerRoot: {
     flex: 1,
   },

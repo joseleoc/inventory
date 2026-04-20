@@ -68,7 +68,6 @@ service cloud.firestore {
                'updated_by'
              ])
              && request.resource.data.current_stock is int
-             && request.resource.data.current_stock >= 0
              && request.resource.data.current_stock <= resource.data.current_stock
              && request.resource.data.updated_by == request.auth.uid;
     }

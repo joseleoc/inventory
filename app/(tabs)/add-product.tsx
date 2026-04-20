@@ -12,6 +12,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { createProduct, type ProductCreateInput } from "@/services/products";
+import { clearSalesProductCache } from "@/services/sales";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
 
@@ -185,6 +186,8 @@ export default function AddProductScreen() {
         user,
         activeOrganization.id,
       );
+
+      clearSalesProductCache();
 
       setSubmitSuccess("Product added successfully.");
       setFormState((current) => ({

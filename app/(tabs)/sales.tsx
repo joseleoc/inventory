@@ -1,27 +1,30 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { BarCodeScanner } from "expo-barcode-scanner";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useToast } from "@/hooks/use-toast";
 import {
-    checkoutCart,
-    clearSalesProductCache,
-    findProductByCode,
-    searchProducts,
-    type ProductLookupItem,
+  checkoutCart,
+  clearSalesProductCache,
+  findProductByCode,
+  searchProducts,
+  type ProductLookupItem,
 } from "@/services/sales";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
 import { useSalesCartStore } from "@/stores/sales-cart-store";
+import { debounce } from "@/utils/debounce";
 
 function FieldLabel({ label }: { label: string }) {
   return (
@@ -40,6 +43,7 @@ export default function SalesScreen() {
   const archivedCarts = useSalesCartStore((state) => state.archivedCarts);
   const activeCartId = useSalesCartStore((state) => state.activeCartId);
   const createCart = useSalesCartStore((state) => state.createCart);
+  const deleteCart = useSalesCartStore((state) => state.deleteCart);
   const switchActiveCart = useSalesCartStore((state) => state.switchActiveCart);
   const renameActiveCart = useSalesCartStore((state) => state.renameActiveCart);
   const addProductToActiveCart = useSalesCartStore((state) => state.addProductToActiveCart);
@@ -61,6 +65,9 @@ export default function SalesScreen() {
     "undetermined",
   );
   const [scanLocked, setScanLocked] = useState(false);
+  const [searchRefreshToken, setSearchRefreshToken] = useState(0);
+  const { showToast, toastElement } = useToast({ position: "top" });
+  const searchRequestTokenRef = useRef(0);
 
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -90,32 +97,65 @@ export default function SalesScreen() {
   );
 
   const activeOrganizationId = activeOrganization?.id ?? "";
+  const hasSearchInput = searchTerm.trim().length > 0;
+
+  const debouncedSearchProducts = useMemo(
+    () =>
+      debounce(async (organizationId: string, rawTerm: string) => {
+        const requestToken = searchRequestTokenRef.current + 1;
+        searchRequestTokenRef.current = requestToken;
+        setIsSearching(true);
+
+        try {
+          const results = await searchProducts(organizationId, rawTerm);
+
+          if (searchRequestTokenRef.current !== requestToken) {
+            return;
+          }
+
+          setSearchResults(results);
+          setScreenError(null);
+        } catch (error) {
+          if (searchRequestTokenRef.current !== requestToken) {
+            return;
+          }
+
+          setScreenError(error instanceof Error ? error.message : "Unable to search products.");
+        } finally {
+          if (searchRequestTokenRef.current === requestToken) {
+            setIsSearching(false);
+          }
+        }
+      }, 280),
+    [],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      clearSalesProductCache();
+      setSearchRefreshToken((current) => current + 1);
+    }, []),
+  );
 
   useEffect(() => {
-    if (!activeOrganizationId) {
+    return () => {
+      debouncedSearchProducts.cancel();
+    };
+  }, [debouncedSearchProducts]);
+
+  useEffect(() => {
+    const normalizedTerm = searchTerm.trim();
+
+    if (!activeOrganizationId || !normalizedTerm) {
+      debouncedSearchProducts.cancel();
+      searchRequestTokenRef.current += 1;
+      setIsSearching(false);
       setSearchResults([]);
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      void (async () => {
-        setIsSearching(true);
-
-        try {
-          const results = await searchProducts(activeOrganizationId, searchTerm);
-          setSearchResults(results);
-        } catch (error) {
-          setScreenError(error instanceof Error ? error.message : "Unable to search products.");
-        } finally {
-          setIsSearching(false);
-        }
-      })();
-    }, 180);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [activeOrganizationId, searchTerm]);
+    debouncedSearchProducts(activeOrganizationId, normalizedTerm);
+  }, [activeOrganizationId, debouncedSearchProducts, searchRefreshToken, searchTerm]);
 
   const pushActionMessage = (message: string, isError = false) => {
     if (isError) {
@@ -227,11 +267,12 @@ export default function SalesScreen() {
 
       archiveActiveCart({ saleId: result.saleId });
       clearSalesProductCache();
-      pushActionMessage(
+      showToast(
         `Checkout complete (${result.totalItems} items, $${result.totalAmount.toFixed(2)}).`,
+        "success",
       );
     } catch (error) {
-      pushActionMessage(error instanceof Error ? error.message : "Unable to checkout cart.", true);
+      showToast(error instanceof Error ? error.message : "Unable to checkout cart.", "error");
     } finally {
       setIsCheckingOut(false);
     }
@@ -335,40 +376,49 @@ export default function SalesScreen() {
             </View>
           ) : null}
 
-          {isSearching ? <ActivityIndicator size="small" /> : null}
+          {hasSearchInput && isSearching ? <ActivityIndicator size="small" /> : null}
 
-          <View style={styles.lookupResults}>
-            {searchResults.map((product) => (
-              <View
-                key={product.id}
-                style={[styles.resultCard, { backgroundColor: inputBackground, borderColor }]}>
-                <View style={styles.resultMeta}>
-                  <ThemedText type="defaultSemiBold" selectable>
-                    {product.name}
-                  </ThemedText>
-                  <ThemedText selectable style={{ color: muted }}>
-                    SKU: {product.sku}
-                    {product.barcode ? ` · Barcode: ${product.barcode}` : ""}
-                  </ThemedText>
-                  <ThemedText selectable style={{ color: muted }}>
-                    Stock: {product.currentStock} · Unit: ${product.unitPrice.toFixed(2)}
-                  </ThemedText>
+          {hasSearchInput ? (
+            <View style={styles.lookupResults}>
+              {searchResults.map((product) => (
+                <View
+                  key={product.id}
+                  style={[styles.resultCard, { backgroundColor: inputBackground, borderColor }]}>
+                  <View style={styles.resultMeta}>
+                    <ThemedText type="defaultSemiBold" selectable>
+                      {product.name}
+                    </ThemedText>
+                    <ThemedText selectable style={{ color: muted }}>
+                      SKU: {product.sku}
+                      {product.barcode ? ` · Barcode: ${product.barcode}` : ""}
+                    </ThemedText>
+                    <ThemedText selectable style={{ color: muted }}>
+                      Stock: {product.currentStock} · Unit: ${product.unitPrice.toFixed(2)}
+                    </ThemedText>
+                  </View>
+                  <Pressable
+                    onPress={() => handleAddProduct(product)}
+                    disabled={!activeOrganization}
+                    style={({ pressed }) => [
+                      styles.addButton,
+                      {
+                        backgroundColor: accentColor,
+                        opacity: pressed || !activeOrganization ? 0.82 : 1,
+                      },
+                    ]}>
+                    <ThemedText style={styles.buttonText}>Add</ThemedText>
+                  </Pressable>
                 </View>
-                <Pressable
-                  onPress={() => handleAddProduct(product)}
-                  disabled={!activeOrganization}
-                  style={({ pressed }) => [
-                    styles.addButton,
-                    {
-                      backgroundColor: accentColor,
-                      opacity: pressed || !activeOrganization ? 0.82 : 1,
-                    },
-                  ]}>
-                  <ThemedText style={styles.buttonText}>Add</ThemedText>
-                </Pressable>
-              </View>
-            ))}
-          </View>
+              ))}
+
+              {!isSearching && searchResults.length === 0 ? (
+                <View
+                  style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
+                  <ThemedText selectable>No products found for this search.</ThemedText>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -411,20 +461,37 @@ export default function SalesScreen() {
             {carts.map((cart) => {
               const selected = cart.id === activeCartId;
               return (
-                <Pressable
-                  key={cart.id}
-                  onPress={() => switchActiveCart(cart.id)}
-                  style={[
-                    styles.cartChip,
-                    {
-                      borderColor: selected ? accentColor : borderColor,
-                      backgroundColor: selected ? accentColor : inputBackground,
-                    },
-                  ]}>
-                  <ThemedText style={{ color: selected ? "#ffffff" : textColor }} selectable>
-                    {cart.clientLabel} ({cart.lines.length})
-                  </ThemedText>
-                </Pressable>
+                <View key={cart.id} style={styles.cartChipRow}>
+                  <Pressable
+                    onPress={() => switchActiveCart(cart.id)}
+                    style={[
+                      styles.cartChip,
+                      {
+                        borderColor: selected ? accentColor : borderColor,
+                        backgroundColor: selected ? accentColor : inputBackground,
+                      },
+                    ]}>
+                    <ThemedText style={{ color: selected ? "#ffffff" : textColor }} selectable>
+                      {cart.clientLabel} ({cart.lines.length})
+                    </ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => deleteCart(cart.id)}
+                    accessibilityLabel={`Delete ${cart.clientLabel}`}
+                    style={({ pressed }) => [
+                      styles.deleteCartButton,
+                      {
+                        borderColor,
+                        backgroundColor: inputBackground,
+                        opacity: pressed ? 0.82 : 1,
+                      },
+                    ]}>
+                    <ThemedText type="defaultSemiBold" style={{ color: dangerColor }}>
+                      Delete
+                    </ThemedText>
+                  </Pressable>
+                </View>
               );
             })}
           </View>
@@ -593,6 +660,8 @@ export default function SalesScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {toastElement}
     </ThemedView>
   );
 }
@@ -714,12 +783,24 @@ const styles = StyleSheet.create({
   cartTabs: {
     gap: 10,
   },
+  cartChipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   cartChip: {
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
     alignSelf: "flex-start",
+    flex: 1,
+  },
+  deleteCartButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   linesWrap: {
     gap: 10,
