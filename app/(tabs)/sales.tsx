@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { BarCodeScanner } from "expo-barcode-scanner";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { ProductSelector } from "@/components/product-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -18,13 +19,11 @@ import {
   checkoutCart,
   clearSalesProductCache,
   findProductByCode,
-  searchProducts,
   type ProductLookupItem,
 } from "@/services/sales";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
 import { useSalesCartStore } from "@/stores/sales-cart-store";
-import { debounce } from "@/utils/debounce";
 
 function FieldLabel({ label }: { label: string }) {
   return (
@@ -55,8 +54,6 @@ export default function SalesScreen() {
   const archiveActiveCart = useSalesCartStore((state) => state.archiveActiveCart);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<ProductLookupItem[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [screenError, setScreenError] = useState<string | null>(null);
   const [screenMessage, setScreenMessage] = useState<string | null>(null);
@@ -67,7 +64,6 @@ export default function SalesScreen() {
   const [scanLocked, setScanLocked] = useState(false);
   const [searchRefreshToken, setSearchRefreshToken] = useState(0);
   const { showToast, toastElement } = useToast({ position: "top" });
-  const searchRequestTokenRef = useRef(0);
 
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -97,38 +93,6 @@ export default function SalesScreen() {
   );
 
   const activeOrganizationId = activeOrganization?.id ?? "";
-  const hasSearchInput = searchTerm.trim().length > 0;
-
-  const debouncedSearchProducts = useMemo(
-    () =>
-      debounce(async (organizationId: string, rawTerm: string) => {
-        const requestToken = searchRequestTokenRef.current + 1;
-        searchRequestTokenRef.current = requestToken;
-        setIsSearching(true);
-
-        try {
-          const results = await searchProducts(organizationId, rawTerm);
-
-          if (searchRequestTokenRef.current !== requestToken) {
-            return;
-          }
-
-          setSearchResults(results);
-          setScreenError(null);
-        } catch (error) {
-          if (searchRequestTokenRef.current !== requestToken) {
-            return;
-          }
-
-          setScreenError(error instanceof Error ? error.message : "Unable to search products.");
-        } finally {
-          if (searchRequestTokenRef.current === requestToken) {
-            setIsSearching(false);
-          }
-        }
-      }, 280),
-    [],
-  );
 
   useFocusEffect(
     useCallback(() => {
@@ -136,26 +100,6 @@ export default function SalesScreen() {
       setSearchRefreshToken((current) => current + 1);
     }, []),
   );
-
-  useEffect(() => {
-    return () => {
-      debouncedSearchProducts.cancel();
-    };
-  }, [debouncedSearchProducts]);
-
-  useEffect(() => {
-    const normalizedTerm = searchTerm.trim();
-
-    if (!activeOrganizationId || !normalizedTerm) {
-      debouncedSearchProducts.cancel();
-      searchRequestTokenRef.current += 1;
-      setIsSearching(false);
-      setSearchResults([]);
-      return;
-    }
-
-    debouncedSearchProducts(activeOrganizationId, normalizedTerm);
-  }, [activeOrganizationId, debouncedSearchProducts, searchRefreshToken, searchTerm]);
 
   const pushActionMessage = (message: string, isError = false) => {
     if (isError) {
@@ -328,36 +272,30 @@ export default function SalesScreen() {
             Product Lookup
           </ThemedText>
 
-          <FieldLabel label="Search by name, SKU, or barcode" />
-          <View style={styles.row}>
-            <TextInput
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-              placeholder="Type name, SKU, or barcode"
-              placeholderTextColor={muted}
-              accessibilityLabel="Product search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={[
-                styles.input,
-                styles.searchInput,
-                { color: textColor, backgroundColor: inputBackground, borderColor },
-              ]}
-            />
-            <Pressable
-              onPress={() => void handleScannerOpen()}
-              disabled={!activeOrganization}
-              style={({ pressed }) => [
-                styles.scanButton,
-                {
-                  borderColor,
-                  backgroundColor: inputBackground,
-                  opacity: pressed || !activeOrganization ? 0.82 : 1,
-                },
-              ]}>
-              <ThemedText type="defaultSemiBold">Scan</ThemedText>
-            </Pressable>
-          </View>
+          <ProductSelector
+            organizationId={activeOrganizationId}
+            query={searchTerm}
+            onQueryChange={setSearchTerm}
+            onSelectProduct={handleAddProduct}
+            refreshToken={searchRefreshToken}
+            actionLabel="Add"
+            actionDisabled={!activeOrganization}
+            inputAccessory={
+              <Pressable
+                onPress={() => void handleScannerOpen()}
+                disabled={!activeOrganization}
+                style={({ pressed }) => [
+                  styles.scanButton,
+                  {
+                    borderColor,
+                    backgroundColor: inputBackground,
+                    opacity: pressed || !activeOrganization ? 0.82 : 1,
+                  },
+                ]}>
+                <ThemedText type="defaultSemiBold">Scan</ThemedText>
+              </Pressable>
+            }
+          />
 
           {isScannerVisible ? (
             <View style={[styles.scannerWrap, { borderColor }]}>
@@ -373,50 +311,6 @@ export default function SalesScreen() {
                 ]}>
                 <ThemedText style={styles.buttonText}>Close scanner</ThemedText>
               </Pressable>
-            </View>
-          ) : null}
-
-          {hasSearchInput && isSearching ? <ActivityIndicator size="small" /> : null}
-
-          {hasSearchInput ? (
-            <View style={styles.lookupResults}>
-              {searchResults.map((product) => (
-                <View
-                  key={product.id}
-                  style={[styles.resultCard, { backgroundColor: inputBackground, borderColor }]}>
-                  <View style={styles.resultMeta}>
-                    <ThemedText type="defaultSemiBold" selectable>
-                      {product.name}
-                    </ThemedText>
-                    <ThemedText selectable style={{ color: muted }}>
-                      SKU: {product.sku}
-                      {product.barcode ? ` · Barcode: ${product.barcode}` : ""}
-                    </ThemedText>
-                    <ThemedText selectable style={{ color: muted }}>
-                      Stock: {product.currentStock} · Unit: ${product.unitPrice.toFixed(2)}
-                    </ThemedText>
-                  </View>
-                  <Pressable
-                    onPress={() => handleAddProduct(product)}
-                    disabled={!activeOrganization}
-                    style={({ pressed }) => [
-                      styles.addButton,
-                      {
-                        backgroundColor: accentColor,
-                        opacity: pressed || !activeOrganization ? 0.82 : 1,
-                      },
-                    ]}>
-                    <ThemedText style={styles.buttonText}>Add</ThemedText>
-                  </Pressable>
-                </View>
-              ))}
-
-              {!isSearching && searchResults.length === 0 ? (
-                <View
-                  style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-                  <ThemedText selectable>No products found for this search.</ThemedText>
-                </View>
-              ) : null}
             </View>
           ) : null}
         </View>

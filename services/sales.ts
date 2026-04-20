@@ -21,7 +21,7 @@ type ProductLookupDocument = {
   stock_threshold: number;
   sale_price?: number;
   unit_price?: number;
-  is_active: boolean;
+  is_active?: boolean;
   updated_at?: unknown;
 };
 
@@ -100,7 +100,7 @@ function mapProduct(documentId: string, data: ProductLookupDocument): ProductLoo
     currentStock: data.current_stock,
     stockThreshold: data.stock_threshold,
     unitPrice: sellingPrice,
-    isActive: data.is_active,
+    isActive: data.is_active ?? true,
   };
 }
 

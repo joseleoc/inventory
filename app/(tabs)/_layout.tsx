@@ -95,6 +95,22 @@ export default function TabLayout() {
           }}
         />
         <Drawer.Screen
+          name="products"
+          options={{
+            title: "Products",
+            drawerIcon: ({ color }: { color: string }) => (
+              <IconSymbol size={24} name="shippingbox.fill" color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="products/[productId]"
+          options={{
+            title: "Edit Product",
+            drawerItemStyle: { display: "none" },
+          }}
+        />
+        <Drawer.Screen
           name="sales"
           options={{
             title: "Sales",

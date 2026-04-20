@@ -1,6 +1,20 @@
 import { FirebaseError } from "firebase/app";
 import { type User } from "firebase/auth";
-import { collection, doc, runTransaction, serverTimestamp, writeBatch } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  runTransaction,
+  serverTimestamp,
+  startAfter,
+  where,
+  writeBatch,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from "firebase/firestore";
 
 import { firebaseDb } from "@/config/firebase";
 
@@ -113,7 +127,42 @@ export type AddProductStockInput = {
   reason?: string;
 };
 
+export type ProductRecord = {
+  id: string;
+  orgId: string;
+  sku: string;
+  barcode?: string;
+  name: string;
+  description?: string;
+  category?: string;
+  currentStock: number;
+  stockThreshold: number;
+  salePrice: number;
+  purchaseUnitCost: number;
+  purchaseQuantity: number;
+  measurementUnit: ProductMeasurementUnit;
+  isActive: boolean;
+};
+
+export type ProductListSort = "updated_at_desc" | "name_asc";
+
+export type ProductListCursor = QueryDocumentSnapshot<DocumentData>;
+
+export type ListActiveProductsPageInput = {
+  orgId: string;
+  pageSize?: number;
+  cursor?: ProductListCursor | null;
+  sort?: ProductListSort;
+};
+
+export type ListActiveProductsPageResult = {
+  items: ProductRecord[];
+  nextCursor: ProductListCursor | null;
+};
+
 const MEASUREMENT_UNITS: ProductMeasurementUnit[] = ["unit", "mass", "volume"];
+const DEFAULT_PRODUCTS_PAGE_SIZE = 20;
+const PRODUCTS_FETCH_MULTIPLIER = 3;
 
 function normalizeOptionalText(value?: string) {
   const normalized = value?.trim();
@@ -126,6 +175,52 @@ function resolveMeasurementUnit(value?: ProductMeasurementUnit): ProductMeasurem
 
 function resolveSalePrice(document: ProductDocument) {
   return document.sale_price ?? document.unit_price ?? 0;
+}
+
+function getUpdatedAtMs(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return 0;
+  }
+
+  if ("toMillis" in value && typeof (value as { toMillis?: unknown }).toMillis === "function") {
+    try {
+      return (value as { toMillis: () => number }).toMillis();
+    } catch {
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
+function mapProductRecord(productId: string, document: ProductDocument): ProductRecord {
+  const barcode =
+    typeof document.barcode === "string" && document.barcode.trim() ? document.barcode : undefined;
+  const description =
+    typeof document.description === "string" && document.description.trim()
+      ? document.description
+      : undefined;
+  const category =
+    typeof document.category === "string" && document.category.trim()
+      ? document.category
+      : undefined;
+
+  return {
+    id: productId,
+    orgId: document.org_id,
+    sku: document.sku,
+    barcode,
+    name: document.name,
+    description,
+    category,
+    currentStock: document.current_stock,
+    stockThreshold: document.stock_threshold,
+    salePrice: resolveSalePrice(document),
+    purchaseUnitCost: document.purchase_unit_cost ?? 0,
+    purchaseQuantity: document.last_purchase_quantity ?? 0,
+    measurementUnit: resolveMeasurementUnit(document.measurement_unit),
+    isActive: document.is_active ?? true,
+  };
 }
 
 function createSnapshot(document: ProductDocument): ProductFinancialSnapshot {
@@ -490,6 +585,93 @@ export async function addProductStock(input: AddProductStockInput, user: User, o
         }),
       );
     });
+  } catch (error) {
+    throw new Error(mapFirestoreError(error));
+  }
+}
+
+export async function listActiveProductsPage(
+  input: ListActiveProductsPageInput,
+): Promise<ListActiveProductsPageResult> {
+  const normalizedOrgId = input.orgId.trim();
+  if (!normalizedOrgId) {
+    return { items: [], nextCursor: null };
+  }
+
+  const pageSize = Math.max(1, Math.min(input.pageSize ?? DEFAULT_PRODUCTS_PAGE_SIZE, 100));
+  const fetchSize = Math.max(pageSize, pageSize * PRODUCTS_FETCH_MULTIPLIER);
+  const sort = input.sort ?? "updated_at_desc";
+
+  try {
+    const productsQuery = input.cursor
+      ? query(
+          collection(firebaseDb, "products"),
+          where("org_id", "==", normalizedOrgId),
+          startAfter(input.cursor),
+          limit(fetchSize),
+        )
+      : query(
+          collection(firebaseDb, "products"),
+          where("org_id", "==", normalizedOrgId),
+          limit(fetchSize),
+        );
+
+    const snapshot = await getDocs(productsQuery);
+    const items = snapshot.docs
+      .map((documentSnapshot) => {
+        const documentData = documentSnapshot.data() as ProductDocument;
+
+        return {
+          product: mapProductRecord(documentSnapshot.id, documentData),
+          updatedAtMs: getUpdatedAtMs((documentData as { updated_at?: unknown }).updated_at),
+        };
+      })
+      .filter((entry) => entry.product.isActive)
+      .sort((first, second) => {
+        if (sort === "name_asc") {
+          return first.product.name.localeCompare(second.product.name);
+        }
+
+        return second.updatedAtMs - first.updatedAtMs;
+      })
+      .slice(0, pageSize)
+      .map((entry) => entry.product);
+
+    const nextCursor =
+      snapshot.docs.length === fetchSize ? snapshot.docs[snapshot.docs.length - 1] : null;
+
+    return {
+      items,
+      nextCursor,
+    };
+  } catch (error) {
+    throw new Error(mapFirestoreError(error));
+  }
+}
+
+export async function getProductById(
+  productId: string,
+  orgId: string,
+): Promise<ProductRecord | null> {
+  const normalizedOrgId = orgId.trim();
+  const normalizedProductId = productId.trim();
+
+  if (!normalizedOrgId || !normalizedProductId) {
+    return null;
+  }
+
+  try {
+    const productSnapshot = await getDoc(doc(firebaseDb, "products", normalizedProductId));
+    if (!productSnapshot.exists()) {
+      return null;
+    }
+
+    const productData = productSnapshot.data() as ProductDocument;
+    if (productData.org_id !== normalizedOrgId) {
+      return null;
+    }
+
+    return mapProductRecord(productSnapshot.id, productData);
   } catch (error) {
     throw new Error(mapFirestoreError(error));
   }
