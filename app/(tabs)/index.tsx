@@ -3,40 +3,30 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
 type HomeCta = {
-  title: string;
-  description: string;
+  key: "products" | "addProduct" | "sales" | "organizations";
   href: "/(tabs)/products" | "/(tabs)/add-product" | "/(tabs)/sales" | "/(tabs)/organizations";
-  buttonLabel: string;
 };
 
 const CTA_ITEMS: HomeCta[] = [
   {
-    title: "Products Catalog",
-    description: "Browse products, inspect stock state, and open product edit/restock details.",
+    key: "products",
     href: "/(tabs)/products",
-    buttonLabel: "Open Products",
   },
   {
-    title: "Add Product",
-    description: "Create a new product with buying, selling, unit, and stock information.",
+    key: "addProduct",
     href: "/(tabs)/add-product",
-    buttonLabel: "Create Product",
   },
   {
-    title: "Sales",
-    description: "Create supermarket-style carts and complete checkout with scanner support.",
+    key: "sales",
     href: "/(tabs)/sales",
-    buttonLabel: "Go to Sales",
   },
   {
-    title: "Organizations",
-    description:
-      "Switch organization context and manage users with organization-level permissions.",
+    key: "organizations",
     href: "/(tabs)/organizations",
-    buttonLabel: "Manage Organizations",
   },
 ];
 
@@ -54,11 +44,10 @@ export default function HomeScreen() {
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <View style={[styles.heroCard, { backgroundColor: panelBackground, borderColor }]}>
           <ThemedText type="title" style={styles.title}>
-            Inventory Dashboard
+            {t("home.title")}
           </ThemedText>
           <ThemedText style={styles.subtitle} selectable>
-            Quick actions to jump into catalog management, stock intake, sales checkout, and
-            organization administration.
+            {t("home.subtitle")}
           </ThemedText>
         </View>
 
@@ -68,9 +57,9 @@ export default function HomeScreen() {
               key={item.href}
               style={[styles.card, { backgroundColor: panelBackground, borderColor }]}>
               <View style={styles.cardTextBlock}>
-                <ThemedText type="subtitle">{item.title}</ThemedText>
+                <ThemedText type="subtitle">{t(`home.ctas.${item.key}.title`)}</ThemedText>
                 <ThemedText style={{ color: text }} selectable>
-                  {item.description}
+                  {t(`home.ctas.${item.key}.description`)}
                 </ThemedText>
               </View>
 
@@ -83,7 +72,9 @@ export default function HomeScreen() {
                     opacity: pressed ? 0.82 : 1,
                   },
                 ]}>
-                <ThemedText style={styles.cardButtonText}>{item.buttonLabel}</ThemedText>
+                <ThemedText style={styles.cardButtonText}>
+                  {t(`home.ctas.${item.key}.button`)}
+                </ThemedText>
               </Pressable>
             </View>
           ))}

@@ -10,6 +10,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { NewCartFab } from "@/components/new-cart-fab";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { t } from "@/config/i18n";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
@@ -39,7 +40,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       <View style={[styles.footer, { borderTopColor: colors.icon }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Log out"
+          accessibilityLabel={t("drawer.logOutA11y")}
           onPress={handleLogout}
           style={({ pressed }) => [
             styles.logoutButton,
@@ -51,7 +52,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
           ]}>
           <IconSymbol size={20} name="rectangle.portrait.and.arrow.right" color={colors.text} />
           <ThemedText type="defaultSemiBold" style={styles.logoutLabel} selectable>
-            Log out
+            {t("drawer.logOut")}
           </ThemedText>
         </Pressable>
       </View>
@@ -70,7 +71,7 @@ export default function TabLayout() {
         <Drawer.Screen
           name="index"
           options={{
-            title: "Home",
+            title: t("drawer.home"),
             drawerIcon: ({ color }: { color: string }) => (
               <IconSymbol size={24} name="house.fill" color={color} />
             ),
@@ -79,7 +80,7 @@ export default function TabLayout() {
         <Drawer.Screen
           name="add-product"
           options={{
-            title: "Add Product",
+            title: t("drawer.addProduct"),
             drawerIcon: ({ color }: { color: string }) => (
               <IconSymbol size={24} name="plus.circle.fill" color={color} />
             ),
@@ -88,7 +89,7 @@ export default function TabLayout() {
         <Drawer.Screen
           name="products"
           options={{
-            title: "Products",
+            title: t("drawer.products"),
             drawerIcon: ({ color }: { color: string }) => (
               <IconSymbol size={24} name="shippingbox.fill" color={color} />
             ),
@@ -97,14 +98,14 @@ export default function TabLayout() {
         <Drawer.Screen
           name="products/[productId]"
           options={{
-            title: "Edit Product",
+            title: t("drawer.editProduct"),
             drawerItemStyle: { display: "none" },
           }}
         />
         <Drawer.Screen
           name="sales"
           options={{
-            title: "Sales",
+            title: t("drawer.sales"),
             drawerIcon: ({ color }: { color: string }) => (
               <IconSymbol size={24} name="cart.fill" color={color} />
             ),
@@ -113,7 +114,7 @@ export default function TabLayout() {
         <Drawer.Screen
           name="organizations"
           options={{
-            title: "Organizations",
+            title: t("drawer.organizations"),
             drawerIcon: ({ color }: { color: string }) => (
               <IconSymbol size={24} name="building.2.fill" color={color} />
             ),

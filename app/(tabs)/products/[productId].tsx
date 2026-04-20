@@ -11,6 +11,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -148,14 +149,14 @@ export default function ProductDetailsScreen() {
       const loaded = await getProductById(normalizedProductId, activeOrganizationId);
       if (!loaded) {
         setProduct(null);
-        setScreenError("Product not found in the active organization.");
+        setScreenError(t("productDetails.notFound"));
         return;
       }
 
       setProduct(loaded);
       setEditForm(toEditFormState(loaded));
     } catch (error) {
-      setScreenError(error instanceof Error ? error.message : "Unable to load product.");
+      setScreenError(error instanceof Error ? error.message : t("productDetails.loadError"));
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +173,7 @@ export default function ProductDetailsScreen() {
 
     const quantityAdded = parseInteger(restockForm.quantityAdded);
     if (quantityAdded === null || quantityAdded <= 0) {
-      showToast("Quantity added must be an integer greater than 0.", "error");
+      showToast(t("productDetails.toasts.quantityAdded"), "error");
       return;
     }
 
@@ -181,7 +182,7 @@ export default function ProductDetailsScreen() {
         ? parseNonNegativeNumber(restockForm.purchaseUnitCost)
         : undefined;
     if (restockForm.purchaseUnitCost.trim().length > 0 && parsedPurchaseUnitCost === null) {
-      showToast("Purchase unit cost must be a non-negative number.", "error");
+      showToast(t("productDetails.toasts.purchaseUnitCost"), "error");
       return;
     }
     const purchaseUnitCost = parsedPurchaseUnitCost ?? undefined;
@@ -191,7 +192,7 @@ export default function ProductDetailsScreen() {
         ? parseNonNegativeNumber(restockForm.purchaseQuantity)
         : undefined;
     if (restockForm.purchaseQuantity.trim().length > 0 && parsedPurchaseQuantity === null) {
-      showToast("Purchase quantity must be a non-negative number.", "error");
+      showToast(t("productDetails.toasts.purchaseQuantity"), "error");
       return;
     }
     const purchaseQuantity = parsedPurchaseQuantity ?? undefined;
@@ -214,9 +215,12 @@ export default function ProductDetailsScreen() {
 
       setRestockForm(EMPTY_RESTOCK_FORM);
       await loadProduct();
-      showToast("Stock updated successfully.", "success");
+      showToast(t("productDetails.toasts.stockUpdated"), "success");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Unable to add stock right now.", "error");
+      showToast(
+        error instanceof Error ? error.message : t("productDetails.toasts.addStockError"),
+        "error",
+      );
     } finally {
       setIsRestocking(false);
     }
@@ -230,37 +234,37 @@ export default function ProductDetailsScreen() {
     const sku = editForm.sku.trim().toUpperCase();
     const name = editForm.name.trim();
     if (!sku || !name) {
-      showToast("SKU and name are required.", "error");
+      showToast(t("productDetails.toasts.skuAndNameRequired"), "error");
       return;
     }
 
     const stockThreshold = parseInteger(editForm.stockThreshold);
     if (stockThreshold === null || stockThreshold < 0) {
-      showToast("Stock threshold must be an integer greater than or equal to 0.", "error");
+      showToast(t("productDetails.toasts.stockThreshold"), "error");
       return;
     }
 
     const salePrice = parseNonNegativeNumber(editForm.salePrice);
     if (salePrice === null) {
-      showToast("Selling price must be a non-negative number.", "error");
+      showToast(t("productDetails.toasts.salePrice"), "error");
       return;
     }
 
     const purchaseUnitCost = parseNonNegativeNumber(editForm.purchaseUnitCost);
     if (purchaseUnitCost === null) {
-      showToast("Purchase unit cost must be a non-negative number.", "error");
+      showToast(t("productDetails.toasts.purchaseUnitCost"), "error");
       return;
     }
 
     const purchaseQuantity = parseNonNegativeNumber(editForm.purchaseQuantity);
     if (purchaseQuantity === null) {
-      showToast("Purchase quantity must be a non-negative number.", "error");
+      showToast(t("productDetails.toasts.purchaseQuantity"), "error");
       return;
     }
 
     const measurementUnit = editForm.measurementUnit.trim().toLowerCase();
     if (!MEASUREMENT_UNITS.includes(measurementUnit as ProductMeasurementUnit)) {
-      showToast("Measurement unit must be one of: unit, mass, volume.", "error");
+      showToast(t("productDetails.toasts.measurementUnit"), "error");
       return;
     }
 
@@ -281,17 +285,17 @@ export default function ProductDetailsScreen() {
           purchaseUnitCost,
           purchaseQuantity,
           measurementUnit: measurementUnit as ProductMeasurementUnit,
-          reason: "Product details updated from product editor",
+          reason: t("productDetails.saveReason"),
         },
         user,
         activeOrganizationId,
       );
 
       await loadProduct();
-      showToast("Product details saved.", "success");
+      showToast(t("productDetails.toasts.detailsSaved"), "success");
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Unable to save product changes.",
+        error instanceof Error ? error.message : t("productDetails.toasts.saveError"),
         "error",
       );
     } finally {
@@ -312,20 +316,22 @@ export default function ProductDetailsScreen() {
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
           <ThemedText type="title" style={styles.title}>
-            Edit Product
+            {t("productDetails.title")}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: muted }]}>
-            Restock first, then adjust catalog details.
+            {t("productDetails.subtitle")}
           </ThemedText>
           <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
-            Product ID: {normalizedProductId || "unknown"}
+            {t("productDetails.productId", {
+              id: normalizedProductId || t("common.unknown"),
+            })}
           </ThemedText>
         </View>
 
         {!activeOrganization ? (
           <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="defaultSemiBold">Organization required</ThemedText>
-            <ThemedText selectable>Select an organization before editing products.</ThemedText>
+            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
+            <ThemedText selectable>{t("productDetails.noActiveOrganization")}</ThemedText>
           </View>
         ) : null}
 
@@ -343,16 +349,16 @@ export default function ProductDetailsScreen() {
           <>
             <View style={styles.section}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Restock
+                {t("productDetails.restockSection")}
               </ThemedText>
 
-              <FieldLabel label="Quantity to add" />
+              <FieldLabel label={t("productDetails.fields.quantityToAdd")} />
               <TextInput
                 value={restockForm.quantityAdded}
                 onChangeText={(value) =>
                   setRestockForm((current) => ({ ...current, quantityAdded: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="number-pad"
                 style={[
@@ -361,13 +367,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Purchase unit cost (optional)" />
+              <FieldLabel label={t("productDetails.fields.purchaseUnitCostOptional")} />
               <TextInput
                 value={restockForm.purchaseUnitCost}
                 onChangeText={(value) =>
                   setRestockForm((current) => ({ ...current, purchaseUnitCost: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="decimal-pad"
                 style={[
@@ -376,13 +382,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Purchase quantity (optional)" />
+              <FieldLabel label={t("productDetails.fields.purchaseQuantityOptional")} />
               <TextInput
                 value={restockForm.purchaseQuantity}
                 onChangeText={(value) =>
                   setRestockForm((current) => ({ ...current, purchaseQuantity: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="decimal-pad"
                 style={[
@@ -391,13 +397,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Reason (optional)" />
+              <FieldLabel label={t("productDetails.fields.reasonOptional")} />
               <TextInput
                 value={restockForm.reason}
                 onChangeText={(value) =>
                   setRestockForm((current) => ({ ...current, reason: value }))
                 }
-                placeholder="Restock reason"
+                placeholder={t("productDetails.placeholders.reason")}
                 placeholderTextColor={muted}
                 style={[
                   styles.input,
@@ -418,21 +424,23 @@ export default function ProductDetailsScreen() {
                 {isRestocking ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <ThemedText style={styles.primaryButtonText}>Add Stock</ThemedText>
+                  <ThemedText style={styles.primaryButtonText}>
+                    {t("productDetails.addStock")}
+                  </ThemedText>
                 )}
               </Pressable>
             </View>
 
             <View style={styles.section}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Product Details
+                {t("productDetails.detailsSection")}
               </ThemedText>
 
-              <FieldLabel label="SKU" />
+              <FieldLabel label={t("productDetails.fields.sku")} />
               <TextInput
                 value={editForm.sku}
                 onChangeText={(value) => setEditForm((current) => ({ ...current, sku: value }))}
-                placeholder="SKU"
+                placeholder={t("productDetails.placeholders.sku")}
                 placeholderTextColor={muted}
                 autoCapitalize="characters"
                 style={[
@@ -441,11 +449,11 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Name" />
+              <FieldLabel label={t("productDetails.fields.name")} />
               <TextInput
                 value={editForm.name}
                 onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))}
-                placeholder="Product name"
+                placeholder={t("productDetails.placeholders.productName")}
                 placeholderTextColor={muted}
                 style={[
                   styles.input,
@@ -453,11 +461,11 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Barcode" />
+              <FieldLabel label={t("productDetails.fields.barcode")} />
               <TextInput
                 value={editForm.barcode}
                 onChangeText={(value) => setEditForm((current) => ({ ...current, barcode: value }))}
-                placeholder="Barcode"
+                placeholder={t("productDetails.placeholders.barcode")}
                 placeholderTextColor={muted}
                 style={[
                   styles.input,
@@ -465,13 +473,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Category" />
+              <FieldLabel label={t("productDetails.fields.category")} />
               <TextInput
                 value={editForm.category}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, category: value }))
                 }
-                placeholder="Category"
+                placeholder={t("productDetails.placeholders.category")}
                 placeholderTextColor={muted}
                 style={[
                   styles.input,
@@ -479,13 +487,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Description" />
+              <FieldLabel label={t("productDetails.fields.description")} />
               <TextInput
                 value={editForm.description}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, description: value }))
                 }
-                placeholder="Description"
+                placeholder={t("productDetails.placeholders.description")}
                 placeholderTextColor={muted}
                 multiline
                 numberOfLines={4}
@@ -497,13 +505,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Stock threshold" />
+              <FieldLabel label={t("productDetails.fields.stockThreshold")} />
               <TextInput
                 value={editForm.stockThreshold}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, stockThreshold: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="number-pad"
                 style={[
@@ -512,13 +520,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Selling price" />
+              <FieldLabel label={t("productDetails.fields.salePrice")} />
               <TextInput
                 value={editForm.salePrice}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, salePrice: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="decimal-pad"
                 style={[
@@ -527,13 +535,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Purchase unit cost" />
+              <FieldLabel label={t("productDetails.fields.purchaseUnitCost")} />
               <TextInput
                 value={editForm.purchaseUnitCost}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, purchaseUnitCost: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="decimal-pad"
                 style={[
@@ -542,13 +550,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Last purchase quantity" />
+              <FieldLabel label={t("productDetails.fields.purchaseQuantity")} />
               <TextInput
                 value={editForm.purchaseQuantity}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, purchaseQuantity: value }))
                 }
-                placeholder="0"
+                placeholder={t("productDetails.placeholders.zero")}
                 placeholderTextColor={muted}
                 keyboardType="decimal-pad"
                 style={[
@@ -557,13 +565,13 @@ export default function ProductDetailsScreen() {
                 ]}
               />
 
-              <FieldLabel label="Measurement unit (unit, mass, volume)" />
+              <FieldLabel label={t("productDetails.fields.measurementUnit")} />
               <TextInput
                 value={editForm.measurementUnit}
                 onChangeText={(value) =>
                   setEditForm((current) => ({ ...current, measurementUnit: value.toLowerCase() }))
                 }
-                placeholder="unit"
+                placeholder={t("productDetails.placeholders.unit")}
                 placeholderTextColor={muted}
                 autoCapitalize="none"
                 style={[
@@ -585,7 +593,9 @@ export default function ProductDetailsScreen() {
                 {isSaving ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <ThemedText style={styles.primaryButtonText}>Save Changes</ThemedText>
+                  <ThemedText style={styles.primaryButtonText}>
+                    {t("productDetails.saveChanges")}
+                  </ThemedText>
                 )}
               </Pressable>
             </View>

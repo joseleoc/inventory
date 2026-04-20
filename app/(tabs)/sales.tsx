@@ -13,6 +13,7 @@ import {
 import { ProductSelector } from "@/components/product-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -115,16 +116,21 @@ export default function SalesScreen() {
     const result = addProductToActiveCart(product, 1);
 
     if (!result.ok) {
-      pushActionMessage(result.message ?? "Unable to add product to cart.", true);
+      pushActionMessage(result.message ?? t("sales.messages.addError"), true);
       return;
     }
 
-    pushActionMessage(`${product.name} added to ${activeCart?.clientLabel ?? "active cart"}.`);
+    pushActionMessage(
+      t("sales.messages.addedToCart", {
+        name: product.name,
+        cart: activeCart?.clientLabel ?? t("sales.messages.activeCartFallback"),
+      }),
+    );
   };
 
   const handleScannerOpen = async () => {
     if (process.env.EXPO_OS === "web") {
-      pushActionMessage("Camera barcode scanner is only available on native mobile.", true);
+      pushActionMessage(t("sales.messages.scannerNativeOnly"), true);
       return;
     }
 
@@ -134,7 +140,7 @@ export default function SalesScreen() {
       setCameraPermission(granted ? "granted" : "denied");
 
       if (!granted) {
-        pushActionMessage("Camera permission denied. Use manual barcode input.", true);
+        pushActionMessage(t("sales.messages.scannerPermissionDenied"), true);
         return;
       }
     }
@@ -158,19 +164,22 @@ export default function SalesScreen() {
       const product = await findProductByCode(activeOrganizationId, normalized);
 
       if (!product) {
-        pushActionMessage("Scanned code not found in active organization catalog.", true);
+        pushActionMessage(t("sales.messages.scannedNotFound"), true);
         return;
       }
 
       const result = addProductToActiveCart(product, 1);
       if (!result.ok) {
-        pushActionMessage(result.message ?? "Unable to add scanned product.", true);
+        pushActionMessage(result.message ?? t("sales.messages.scannedAddError"), true);
         return;
       }
 
-      pushActionMessage(`${product.name} added from scanner.`);
+      pushActionMessage(t("sales.messages.scannedAdded", { name: product.name }));
     } catch (error) {
-      pushActionMessage(error instanceof Error ? error.message : "Unable to process scan.", true);
+      pushActionMessage(
+        error instanceof Error ? error.message : t("sales.messages.scanProcessError"),
+        true,
+      );
     } finally {
       setTimeout(() => {
         setScanLocked(false);
@@ -212,11 +221,17 @@ export default function SalesScreen() {
       archiveActiveCart({ saleId: result.saleId });
       clearSalesProductCache();
       showToast(
-        `Checkout complete (${result.totalItems} items, $${result.totalAmount.toFixed(2)}).`,
+        t("sales.messages.checkoutComplete", {
+          items: result.totalItems,
+          total: result.totalAmount.toFixed(2),
+        }),
         "success",
       );
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Unable to checkout cart.", "error");
+      showToast(
+        error instanceof Error ? error.message : t("sales.messages.checkoutError"),
+        "error",
+      );
     } finally {
       setIsCheckingOut(false);
     }
@@ -235,24 +250,23 @@ export default function SalesScreen() {
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
           <ThemedText type="title" style={styles.title}>
-            Sales
+            {t("sales.title")}
           </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: muted }]}>
-            Fast search + scan with multiple active carts for supermarket-style checkout.
-          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: muted }]}>{t("sales.subtitle")}</ThemedText>
           <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
             {activeOrganization
-              ? `Active org: ${activeOrganization.name} · ${activeMembership?.role ?? "member"}`
-              : "No active organization selected. Open Organizations from the drawer first."}
+              ? t("common.activeOrgWithRole", {
+                  name: activeOrganization.name,
+                  role: activeMembership?.role ?? t("common.member"),
+                })
+              : t("common.noActiveOrgSelected")}
           </ThemedText>
         </View>
 
         {!activeOrganization ? (
           <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="defaultSemiBold">Organization required</ThemedText>
-            <ThemedText selectable>
-              Create or switch to an active organization before selling products.
-            </ThemedText>
+            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
+            <ThemedText selectable>{t("sales.noActiveOrganization")}</ThemedText>
           </View>
         ) : null}
 
@@ -269,7 +283,7 @@ export default function SalesScreen() {
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Product Lookup
+            {t("sales.lookupTitle")}
           </ThemedText>
 
           <ProductSelector
@@ -278,7 +292,7 @@ export default function SalesScreen() {
             onQueryChange={setSearchTerm}
             onSelectProduct={handleAddProduct}
             refreshToken={searchRefreshToken}
-            actionLabel="Add"
+            actionLabel={t("sales.selectorAction")}
             actionDisabled={!activeOrganization}
             inputAccessory={
               <Pressable
@@ -292,7 +306,7 @@ export default function SalesScreen() {
                     opacity: pressed || !activeOrganization ? 0.82 : 1,
                   },
                 ]}>
-                <ThemedText type="defaultSemiBold">Scan</ThemedText>
+                <ThemedText type="defaultSemiBold">{t("sales.scanButton")}</ThemedText>
               </Pressable>
             }
           />
@@ -309,7 +323,7 @@ export default function SalesScreen() {
                   styles.closeScannerButton,
                   { backgroundColor: accentColor, opacity: pressed ? 0.82 : 1 },
                 ]}>
-                <ThemedText style={styles.buttonText}>Close scanner</ThemedText>
+                <ThemedText style={styles.buttonText}>{t("sales.closeScanner")}</ThemedText>
               </Pressable>
             </View>
           ) : null}
@@ -317,14 +331,14 @@ export default function SalesScreen() {
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Carts
+            {t("sales.cartsTitle")}
           </ThemedText>
 
           <View style={styles.row}>
             <Pressable
               onPress={() => {
                 const cartNumber = carts.length + archivedCarts.length + 1;
-                createCart(`Client ${cartNumber}`);
+                createCart(t("newCartFab.clientName", { number: cartNumber }));
               }}
               style={({ pressed }) => [
                 styles.newCartButton,
@@ -334,7 +348,7 @@ export default function SalesScreen() {
                   opacity: pressed ? 0.82 : 1,
                 },
               ]}>
-              <ThemedText type="defaultSemiBold">New cart</ThemedText>
+              <ThemedText type="defaultSemiBold">{t("sales.newCart")}</ThemedText>
             </Pressable>
             <Pressable
               onPress={clearActiveCart}
@@ -347,7 +361,7 @@ export default function SalesScreen() {
                   opacity: pressed || !activeCart || activeCart.lines.length === 0 ? 0.65 : 1,
                 },
               ]}>
-              <ThemedText type="defaultSemiBold">Clear cart</ThemedText>
+              <ThemedText type="defaultSemiBold">{t("sales.clearCart")}</ThemedText>
             </Pressable>
           </View>
 
@@ -372,7 +386,7 @@ export default function SalesScreen() {
 
                   <Pressable
                     onPress={() => deleteCart(cart.id)}
-                    accessibilityLabel={`Delete ${cart.clientLabel}`}
+                    accessibilityLabel={t("sales.deleteCartA11y", { label: cart.clientLabel })}
                     style={({ pressed }) => [
                       styles.deleteCartButton,
                       {
@@ -382,7 +396,7 @@ export default function SalesScreen() {
                       },
                     ]}>
                     <ThemedText type="defaultSemiBold" style={{ color: dangerColor }}>
-                      Delete
+                      {t("sales.deleteCart")}
                     </ThemedText>
                   </Pressable>
                 </View>
@@ -392,11 +406,11 @@ export default function SalesScreen() {
 
           {activeCart ? (
             <>
-              <FieldLabel label="Active cart label" />
+              <FieldLabel label={t("sales.activeCartLabel")} />
               <TextInput
                 value={activeCart.clientLabel}
                 onChangeText={renameActiveCart}
-                placeholder="Client name"
+                placeholder={t("sales.activeCartPlaceholder")}
                 placeholderTextColor={muted}
                 style={[
                   styles.input,
@@ -407,9 +421,7 @@ export default function SalesScreen() {
               {activeCart.lines.length === 0 ? (
                 <View
                   style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-                  <ThemedText selectable>
-                    Cart is empty. Add products from search or scanner.
-                  </ThemedText>
+                  <ThemedText selectable>{t("sales.cartEmpty")}</ThemedText>
                 </View>
               ) : (
                 <View style={styles.linesWrap}>
@@ -428,13 +440,18 @@ export default function SalesScreen() {
                             {line.name}
                           </ThemedText>
                           <ThemedText selectable style={{ color: muted }}>
-                            SKU: {line.sku} · ${line.unitPrice.toFixed(2)} each
+                            {t("sales.lineSkuAndPrice", {
+                              sku: line.sku,
+                              price: line.unitPrice.toFixed(2),
+                            })}
                           </ThemedText>
                           <ThemedText
                             selectable
                             style={{ color: isLowStock ? dangerColor : muted }}>
-                            Stock snapshot: {line.currentStockSnapshot}
-                            {isLowStock ? " · Low stock" : ""}
+                            {t("sales.lineStockSnapshot", {
+                              stock: line.currentStockSnapshot,
+                              low: isLowStock ? t("sales.lowStockSuffix") : "",
+                            })}
                           </ThemedText>
                         </View>
 
@@ -510,7 +527,7 @@ export default function SalesScreen() {
                                 opacity: pressed ? 0.82 : 1,
                               },
                             ]}>
-                            <ThemedText type="defaultSemiBold">Remove</ThemedText>
+                            <ThemedText type="defaultSemiBold">{t("sales.remove")}</ThemedText>
                           </Pressable>
                         </View>
                       </View>
@@ -523,7 +540,7 @@ export default function SalesScreen() {
 
           <View style={[styles.checkoutCard, { backgroundColor: inputBackground, borderColor }]}>
             <ThemedText type="defaultSemiBold" selectable>
-              Items: {totalItems} · Total: ${totalAmount.toFixed(2)}
+              {t("sales.totals", { items: totalItems, total: totalAmount.toFixed(2) })}
             </ThemedText>
 
             <Pressable
@@ -548,7 +565,7 @@ export default function SalesScreen() {
               {isCheckingOut ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <ThemedText style={styles.buttonText}>Checkout active cart</ThemedText>
+                <ThemedText style={styles.buttonText}>{t("sales.checkout")}</ThemedText>
               )}
             </Pressable>
           </View>

@@ -10,6 +10,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { createProduct, type ProductCreateInput } from "@/services/products";
 import { clearSalesProductCache } from "@/services/sales";
@@ -72,44 +73,44 @@ function validateForm(state: FormState) {
 
   const sku = state.sku.trim();
   if (!sku) {
-    errors.sku = "SKU is required.";
+    errors.sku = t("addProduct.validation.skuRequired");
   }
 
   const name = state.name.trim();
   if (!name) {
-    errors.name = "Product name is required.";
+    errors.name = t("addProduct.validation.nameRequired");
   }
 
   const currentStock = parseInteger(state.currentStock);
   if (currentStock === null || currentStock < 0) {
-    errors.currentStock = "Current stock must be an integer greater than or equal to 0.";
+    errors.currentStock = t("addProduct.validation.currentStock");
   }
 
   const stockThreshold = parseInteger(state.stockThreshold);
   if (stockThreshold === null || stockThreshold < 0) {
-    errors.stockThreshold = "Stock threshold must be an integer greater than or equal to 0.";
+    errors.stockThreshold = t("addProduct.validation.stockThreshold");
   }
 
   const salePrice = parseNonNegativeNumber(state.salePrice);
   if (salePrice === null) {
-    errors.salePrice = "Selling price must be a number greater than or equal to 0.";
+    errors.salePrice = t("addProduct.validation.salePrice");
   }
 
   const purchaseUnitCost = parseNonNegativeNumber(state.purchaseUnitCost);
   if (purchaseUnitCost === null) {
-    errors.purchaseUnitCost = "Purchase unit cost must be a number greater than or equal to 0.";
+    errors.purchaseUnitCost = t("addProduct.validation.purchaseUnitCost");
   }
 
   const purchaseQuantity = parseNonNegativeNumber(state.purchaseQuantity);
   if (purchaseQuantity === null) {
-    errors.purchaseQuantity = "Purchase quantity must be a number greater than or equal to 0.";
+    errors.purchaseQuantity = t("addProduct.validation.purchaseQuantity");
   }
 
   const normalizedMeasurementUnit = state.measurementUnit.trim().toLowerCase();
   if (
     !MEASUREMENT_UNITS.includes(normalizedMeasurementUnit as (typeof MEASUREMENT_UNITS)[number])
   ) {
-    errors.measurementUnit = "Measurement unit must be one of: unit, mass, or volume.";
+    errors.measurementUnit = t("addProduct.validation.measurementUnit");
   }
 
   const hasErrors = Object.keys(errors).length > 0;
@@ -227,14 +228,14 @@ export default function AddProductScreen() {
 
       clearSalesProductCache();
 
-      setSubmitSuccess("Product added successfully.");
+      setSubmitSuccess(t("addProduct.success"));
       setFormState((current) => ({
         ...INITIAL_STATE,
         stockThreshold: current.stockThreshold,
         measurementUnit: current.measurementUnit,
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to add product right now.";
+      const message = error instanceof Error ? error.message : t("addProduct.errorUnable");
       setSubmitError(message);
     } finally {
       setIsSubmitting(false);
@@ -254,40 +255,41 @@ export default function AddProductScreen() {
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
           <ThemedText type="title" style={styles.title}>
-            Add Product
+            {t("addProduct.title")}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: muted }]}>
-            Create a product in your organization inventory catalog.
+            {t("addProduct.subtitle")}
           </ThemedText>
           <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
             {activeOrganization
-              ? `Active org: ${activeOrganization.name} · ${activeMembership?.role ?? "member"}`
-              : "No active organization selected. Open Organizations from the drawer first."}
+              ? t("common.activeOrgWithRole", {
+                  name: activeOrganization.name,
+                  role: activeMembership?.role ?? t("common.member"),
+                })
+              : t("common.noActiveOrgSelected")}
           </ThemedText>
         </View>
 
         {!activeOrganization ? (
           <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="defaultSemiBold">Organization required</ThemedText>
-            <ThemedText selectable>
-              Create or switch to an active organization before adding products.
-            </ThemedText>
+            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
+            <ThemedText selectable>{t("addProduct.noActiveOrganization")}</ThemedText>
           </View>
         ) : null}
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Required Details
+            {t("addProduct.requiredDetails")}
           </ThemedText>
 
-          <FieldLabel label="SKU" />
+          <FieldLabel label={t("addProduct.fields.sku")} />
           <TextInput
             value={formState.sku}
             onChangeText={(value) => updateField("sku", value)}
-            placeholder="SKU"
+            placeholder={t("addProduct.placeholders.sku")}
             placeholderTextColor={muted}
             autoCapitalize="characters"
-            accessibilityLabel="SKU"
+            accessibilityLabel={t("addProduct.fields.sku")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -295,13 +297,13 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.sku} />
 
-          <FieldLabel label="Product Name" />
+          <FieldLabel label={t("addProduct.fields.productName")} />
           <TextInput
             value={formState.name}
             onChangeText={(value) => updateField("name", value)}
-            placeholder="Product name"
+            placeholder={t("addProduct.placeholders.productName")}
             placeholderTextColor={muted}
-            accessibilityLabel="Product name"
+            accessibilityLabel={t("addProduct.fields.productName")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -309,14 +311,14 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.name} />
 
-          <FieldLabel label="Current Stock" />
+          <FieldLabel label={t("addProduct.fields.currentStock")} />
           <TextInput
             value={formState.currentStock}
             onChangeText={(value) => updateField("currentStock", value)}
-            placeholder="Current stock"
+            placeholder={t("addProduct.placeholders.currentStock")}
             placeholderTextColor={muted}
             keyboardType="number-pad"
-            accessibilityLabel="Current stock"
+            accessibilityLabel={t("addProduct.fields.currentStock")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -324,14 +326,14 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.currentStock} />
 
-          <FieldLabel label="Stock Threshold" />
+          <FieldLabel label={t("addProduct.fields.stockThreshold")} />
           <TextInput
             value={formState.stockThreshold}
             onChangeText={(value) => updateField("stockThreshold", value)}
-            placeholder="Stock threshold"
+            placeholder={t("addProduct.placeholders.stockThreshold")}
             placeholderTextColor={muted}
             keyboardType="number-pad"
-            accessibilityLabel="Stock threshold"
+            accessibilityLabel={t("addProduct.fields.stockThreshold")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -339,14 +341,14 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.stockThreshold} />
 
-          <FieldLabel label="Selling Price" />
+          <FieldLabel label={t("addProduct.fields.salePrice")} />
           <TextInput
             value={formState.salePrice}
             onChangeText={(value) => updateField("salePrice", value)}
-            placeholder="Selling price"
+            placeholder={t("addProduct.placeholders.salePrice")}
             placeholderTextColor={muted}
             keyboardType="decimal-pad"
-            accessibilityLabel="Selling price"
+            accessibilityLabel={t("addProduct.fields.salePrice")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -354,14 +356,14 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.salePrice} />
 
-          <FieldLabel label="Purchase Unit Cost" />
+          <FieldLabel label={t("addProduct.fields.purchaseUnitCost")} />
           <TextInput
             value={formState.purchaseUnitCost}
             onChangeText={(value) => updateField("purchaseUnitCost", value)}
-            placeholder="Purchase unit cost"
+            placeholder={t("addProduct.placeholders.purchaseUnitCost")}
             placeholderTextColor={muted}
             keyboardType="decimal-pad"
-            accessibilityLabel="Purchase unit cost"
+            accessibilityLabel={t("addProduct.fields.purchaseUnitCost")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -369,14 +371,14 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.purchaseUnitCost} />
 
-          <FieldLabel label="Last Purchase Quantity" />
+          <FieldLabel label={t("addProduct.fields.purchaseQuantity")} />
           <TextInput
             value={formState.purchaseQuantity}
             onChangeText={(value) => updateField("purchaseQuantity", value)}
-            placeholder="Last purchase quantity"
+            placeholder={t("addProduct.placeholders.purchaseQuantity")}
             placeholderTextColor={muted}
             keyboardType="decimal-pad"
-            accessibilityLabel="Last purchase quantity"
+            accessibilityLabel={t("addProduct.fields.purchaseQuantity")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -384,14 +386,14 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.purchaseQuantity} />
 
-          <FieldLabel label="Measurement Unit (unit, mass, volume)" />
+          <FieldLabel label={t("addProduct.fields.measurementUnit")} />
           <TextInput
             value={formState.measurementUnit}
             onChangeText={(value) => updateField("measurementUnit", value)}
-            placeholder="unit"
+            placeholder={t("addProduct.placeholders.measurementUnit")}
             placeholderTextColor={muted}
             autoCapitalize="none"
-            accessibilityLabel="Measurement unit"
+            accessibilityLabel={t("addProduct.fields.measurementUnit")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -402,46 +404,46 @@ export default function AddProductScreen() {
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Optional Details
+            {t("addProduct.optionalDetails")}
           </ThemedText>
 
-          <FieldLabel label="Barcode" />
+          <FieldLabel label={t("addProduct.fields.barcode")} />
           <TextInput
             value={formState.barcode}
             onChangeText={(value) => updateField("barcode", value)}
-            placeholder="Barcode"
+            placeholder={t("addProduct.placeholders.barcode")}
             placeholderTextColor={muted}
             autoCapitalize="characters"
-            accessibilityLabel="Barcode"
+            accessibilityLabel={t("addProduct.fields.barcode")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
             ]}
           />
 
-          <FieldLabel label="Category" />
+          <FieldLabel label={t("addProduct.fields.category")} />
           <TextInput
             value={formState.category}
             onChangeText={(value) => updateField("category", value)}
-            placeholder="Category"
+            placeholder={t("addProduct.placeholders.category")}
             placeholderTextColor={muted}
-            accessibilityLabel="Category"
+            accessibilityLabel={t("addProduct.fields.category")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
             ]}
           />
 
-          <FieldLabel label="Description" />
+          <FieldLabel label={t("addProduct.fields.description")} />
           <TextInput
             value={formState.description}
             onChangeText={(value) => updateField("description", value)}
-            placeholder="Description"
+            placeholder={t("addProduct.placeholders.description")}
             placeholderTextColor={muted}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
-            accessibilityLabel="Description"
+            accessibilityLabel={t("addProduct.fields.description")}
             style={[
               styles.input,
               styles.multiline,
@@ -466,7 +468,7 @@ export default function AddProductScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <ThemedText style={styles.submitText}>Save Product</ThemedText>
+            <ThemedText style={styles.submitText}>{t("addProduct.submit")}</ThemedText>
           )}
         </Pressable>
       </ScrollView>

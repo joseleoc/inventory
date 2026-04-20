@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useSalesCartStore } from "@/stores/sales-cart-store";
 
@@ -16,21 +17,21 @@ export function NewCartFab() {
 
   const handleCreateCart = () => {
     const cartNumber = carts.length + archivedCarts.length + 1;
-    createCart(`Client ${cartNumber}`);
+    createCart(t("newCartFab.clientName", { number: cartNumber }));
     router.push("/(tabs)/sales");
   };
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Create new cart"
+      accessibilityLabel={t("newCartFab.a11y")}
       onPress={handleCreateCart}
       style={({ pressed }) => [
         styles.fab,
         { backgroundColor: buttonColor, opacity: pressed ? 0.82 : 1 },
       ]}>
       <IconSymbol size={18} name="cart.fill" color="#000000" />
-      <ThemedText style={styles.label}>New Cart</ThemedText>
+      <ThemedText style={styles.label}>{t("newCartFab.label")}</ThemedText>
     </Pressable>
   );
 }

@@ -7,12 +7,13 @@ import { z } from "zod";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 
 const forgotPasswordSchema = z.object({
-  email: z.email("Enter a valid email address."),
+  email: z.email(t("auth.forgotPassword.validation.email")),
 });
 
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
@@ -48,7 +49,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       await sendPasswordReset(values.email.trim());
-      setSuccessMessage("Reset instructions were sent to your email.");
+      setSuccessMessage(t("auth.forgotPassword.success"));
     } catch {
       // Store error state already contains the user-facing message.
     }
@@ -63,15 +64,15 @@ export default function ForgotPasswordScreen() {
         <View
           style={[styles.card, { backgroundColor: colors.background, borderColor: colors.icon }]}>
           <ThemedText type="title" style={styles.title} selectable>
-            Reset password
+            {t("auth.forgotPassword.title")}
           </ThemedText>
           <ThemedText style={styles.subtitle} selectable>
-            Enter your email and we&apos;ll send a password reset link.
+            {t("auth.forgotPassword.subtitle")}
           </ThemedText>
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Email
+              {t("common.labels.email")}
             </ThemedText>
             <Controller
               control={control}
@@ -86,9 +87,9 @@ export default function ForgotPasswordScreen() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                   autoComplete="email"
-                  accessibilityLabel="Email"
+                  accessibilityLabel={t("common.labels.email")}
                   editable={!isSubmitting}
-                  placeholder="name@example.com"
+                  placeholder={t("auth.forgotPassword.emailPlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -121,7 +122,7 @@ export default function ForgotPasswordScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Send reset email"
+            accessibilityLabel={t("auth.forgotPassword.submitA11y")}
             disabled={isSubmitting}
             onPress={handleSubmit(onSubmit)}
             style={({ pressed }) => [
@@ -129,17 +130,17 @@ export default function ForgotPasswordScreen() {
               { backgroundColor: colors.tint, opacity: isSubmitting || pressed ? 0.85 : 1 },
             ]}>
             <ThemedText style={styles.buttonText} selectable>
-              {isSubmitting ? "Sending email..." : "Send reset email"}
+              {isSubmitting ? t("auth.forgotPassword.submitting") : t("auth.forgotPassword.submit")}
             </ThemedText>
           </Pressable>
 
           <Link href="/(auth)/login" asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Back to login"
+              accessibilityLabel={t("auth.forgotPassword.backToLoginA11y")}
               style={styles.linkButton}>
               <ThemedText type="link" style={styles.linkText} selectable>
-                Back to login
+                {t("auth.forgotPassword.backToLogin")}
               </ThemedText>
             </Pressable>
           </Link>

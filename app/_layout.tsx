@@ -7,6 +7,7 @@ import { ActivityIndicator, StyleSheet } from "react-native";
 import "react-native-reanimated";
 
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
@@ -93,7 +94,7 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+        <Stack.Screen name="modal" options={{ presentation: "modal", title: t("modal.title") }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

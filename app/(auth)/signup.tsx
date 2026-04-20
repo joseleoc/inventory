@@ -7,20 +7,21 @@ import { z } from "zod";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 
 const signupSchema = z
   .object({
-    name: z.string().min(2, "Name must have at least 2 characters."),
-    email: z.email("Enter a valid email address."),
-    password: z.string().min(8, "Password must have at least 8 characters."),
-    confirmPassword: z.string().min(1, "Please confirm your password."),
+    name: z.string().min(2, t("auth.signup.validation.name")),
+    email: z.email(t("auth.signup.validation.email")),
+    password: z.string().min(8, t("auth.signup.validation.password")),
+    confirmPassword: z.string().min(1, t("auth.signup.validation.confirmPassword")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match.",
+    message: t("auth.signup.validation.passwordMismatch"),
   });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -72,16 +73,15 @@ export default function SignupScreen() {
         <View
           style={[styles.card, { backgroundColor: colors.background, borderColor: colors.icon }]}>
           <ThemedText type="title" style={styles.title} selectable>
-            Create account
+            {t("auth.signup.title")}
           </ThemedText>
           <ThemedText style={styles.subtitle} selectable>
-            New accounts are created with the admin role. If you have no organization, you will be
-            redirected to set one up.
+            {t("auth.signup.subtitle")}
           </ThemedText>
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Name
+              {t("common.labels.name")}
             </ThemedText>
             <Controller
               control={control}
@@ -95,9 +95,9 @@ export default function SignupScreen() {
                   autoCorrect={false}
                   textContentType="name"
                   autoComplete="name"
-                  accessibilityLabel="Name"
+                  accessibilityLabel={t("common.labels.name")}
                   editable={!isSubmitting}
-                  placeholder="Jane Doe"
+                  placeholder={t("auth.signup.namePlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -118,7 +118,7 @@ export default function SignupScreen() {
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Email
+              {t("common.labels.email")}
             </ThemedText>
             <Controller
               control={control}
@@ -133,9 +133,9 @@ export default function SignupScreen() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                   autoComplete="email"
-                  accessibilityLabel="Email"
+                  accessibilityLabel={t("common.labels.email")}
                   editable={!isSubmitting}
-                  placeholder="name@example.com"
+                  placeholder={t("auth.signup.emailPlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -156,7 +156,7 @@ export default function SignupScreen() {
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Password
+              {t("common.labels.password")}
             </ThemedText>
             <Controller
               control={control}
@@ -169,9 +169,9 @@ export default function SignupScreen() {
                   secureTextEntry
                   textContentType="newPassword"
                   autoComplete="password-new"
-                  accessibilityLabel="Password"
+                  accessibilityLabel={t("common.labels.password")}
                   editable={!isSubmitting}
-                  placeholder="Minimum 8 characters"
+                  placeholder={t("auth.signup.passwordPlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -192,7 +192,7 @@ export default function SignupScreen() {
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Confirm Password
+              {t("auth.signup.confirmPasswordLabel")}
             </ThemedText>
             <Controller
               control={control}
@@ -205,9 +205,9 @@ export default function SignupScreen() {
                   secureTextEntry
                   textContentType="password"
                   autoComplete="password-new"
-                  accessibilityLabel="Confirm password"
+                  accessibilityLabel={t("auth.signup.confirmPasswordA11y")}
                   editable={!isSubmitting}
-                  placeholder="Re-enter your password"
+                  placeholder={t("auth.signup.confirmPasswordPlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -234,7 +234,7 @@ export default function SignupScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Create account"
+            accessibilityLabel={t("auth.signup.submitA11y")}
             disabled={isSubmitting}
             onPress={handleSubmit(onSubmit)}
             style={({ pressed }) => [
@@ -242,17 +242,17 @@ export default function SignupScreen() {
               { backgroundColor: colors.tint, opacity: isSubmitting || pressed ? 0.85 : 1 },
             ]}>
             <ThemedText style={styles.buttonText} selectable>
-              {isSubmitting ? "Creating account..." : "Create account"}
+              {isSubmitting ? t("auth.signup.submitting") : t("auth.signup.submit")}
             </ThemedText>
           </Pressable>
 
           <Link href="/(auth)/login" asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Back to login"
+              accessibilityLabel={t("auth.signup.backToLoginA11y")}
               style={styles.linkButton}>
               <ThemedText type="link" style={styles.linkText} selectable>
-                Already have an account? Sign in
+                {t("auth.signup.backToLogin")}
               </ThemedText>
             </Pressable>
           </Link>

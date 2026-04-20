@@ -7,13 +7,14 @@ import { z } from "zod";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 
 const loginSchema = z.object({
-  email: z.email("Enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  email: z.email(t("auth.login.validation.email")),
+  password: z.string().min(1, t("auth.login.validation.password")),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -63,15 +64,15 @@ export default function LoginScreen() {
         <View
           style={[styles.card, { backgroundColor: colors.background, borderColor: colors.icon }]}>
           <ThemedText type="title" style={styles.title} selectable>
-            Welcome back
+            {t("auth.login.title")}
           </ThemedText>
           <ThemedText style={styles.subtitle} selectable>
-            Sign in with your email and password.
+            {t("auth.login.subtitle")}
           </ThemedText>
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Email
+              {t("common.labels.email")}
             </ThemedText>
             <Controller
               control={control}
@@ -86,9 +87,9 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                   autoComplete="email"
-                  accessibilityLabel="Email"
+                  accessibilityLabel={t("common.labels.email")}
                   editable={!isSubmitting}
-                  placeholder="name@example.com"
+                  placeholder={t("auth.login.emailPlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -109,7 +110,7 @@ export default function LoginScreen() {
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
-              Password
+              {t("common.labels.password")}
             </ThemedText>
             <Controller
               control={control}
@@ -122,9 +123,9 @@ export default function LoginScreen() {
                   secureTextEntry
                   textContentType="password"
                   autoComplete="password"
-                  accessibilityLabel="Password"
+                  accessibilityLabel={t("common.labels.password")}
                   editable={!isSubmitting}
-                  placeholder="Enter your password"
+                  placeholder={t("auth.login.passwordPlaceholder")}
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -151,7 +152,7 @@ export default function LoginScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Sign in"
+            accessibilityLabel={t("auth.login.submitA11y")}
             disabled={isSubmitting}
             onPress={handleSubmit(onSubmit)}
             style={({ pressed }) => [
@@ -159,17 +160,17 @@ export default function LoginScreen() {
               { backgroundColor: colors.tint, opacity: isSubmitting || pressed ? 0.85 : 1 },
             ]}>
             <ThemedText style={styles.buttonText} selectable>
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
             </ThemedText>
           </Pressable>
 
           <Link href="/(auth)/forgot-password" asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Forgot password"
+              accessibilityLabel={t("auth.login.forgotA11y")}
               style={styles.linkButton}>
               <ThemedText type="link" style={styles.linkText} selectable>
-                Forgot your password?
+                {t("auth.login.forgotPassword")}
               </ThemedText>
             </Pressable>
           </Link>
@@ -177,10 +178,10 @@ export default function LoginScreen() {
           <Link href="/(auth)/signup" asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Create account"
+              accessibilityLabel={t("auth.login.createA11y")}
               style={styles.linkButton}>
               <ThemedText type="link" style={styles.linkText} selectable>
-                Don&apos;t have an account? Create one
+                {t("auth.login.createAccount")}
               </ThemedText>
             </Pressable>
           </Link>

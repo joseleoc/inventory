@@ -10,6 +10,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import {
     ORGANIZATION_ROLE_OPTIONS,
@@ -56,7 +57,7 @@ function validateOrganizationForm(state: OrganizationFormState) {
   const errors: OrganizationErrors = {};
 
   if (!state.name.trim()) {
-    errors.name = "Organization name is required.";
+    errors.name = t("organizations.validation.organizationName");
   }
 
   return errors;
@@ -67,13 +68,13 @@ function validateAssignmentForm(state: AssignmentFormState) {
   const normalizedEmail = state.email.trim().toLowerCase();
 
   if (!normalizedEmail) {
-    errors.email = "Email is required.";
+    errors.email = t("organizations.validation.emailRequired");
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    errors.email = "Enter a valid email address.";
+    errors.email = t("organizations.validation.emailInvalid");
   }
 
   if (!state.organizationId.trim()) {
-    errors.organizationId = "Select an organization first.";
+    errors.organizationId = t("organizations.validation.orgRequired");
   }
 
   return errors;
@@ -129,6 +130,8 @@ export default function OrganizationsScreen() {
     [background],
   );
 
+  const formatRoleLabel = (role: OrganizationRole) => t(`organizations.roles.${role}`);
+
   const activeOrganizationId = activeOrganization?.id ?? "";
 
   useEffect(() => {
@@ -177,9 +180,11 @@ export default function OrganizationsScreen() {
       await initializeOrganizationContext(user);
       setAssignmentForm((current) => ({ ...current, organizationId }));
       setOrganizationForm(INITIAL_ORGANIZATION_STATE);
-      setScreenMessage("Organization created and set as your active context.");
+      setScreenMessage(t("organizations.messages.created"));
     } catch (error) {
-      setScreenError(error instanceof Error ? error.message : "Unable to create organization.");
+      setScreenError(
+        error instanceof Error ? error.message : t("organizations.messages.createError"),
+      );
     } finally {
       setIsCreating(false);
     }
@@ -214,11 +219,13 @@ export default function OrganizationsScreen() {
       setAssignmentForm((current) => ({ ...current, email: "" }));
       setScreenMessage(
         result.mode === "membership"
-          ? `User assigned to ${result.organizationName}.`
-          : `Invitation created for ${result.organizationName}.`,
+          ? t("organizations.messages.assigned", { organizationName: result.organizationName })
+          : t("organizations.messages.invited", { organizationName: result.organizationName }),
       );
     } catch (error) {
-      setScreenError(error instanceof Error ? error.message : "Unable to assign user.");
+      setScreenError(
+        error instanceof Error ? error.message : t("organizations.messages.assignError"),
+      );
     } finally {
       setIsAssigning(false);
     }
@@ -237,21 +244,28 @@ export default function OrganizationsScreen() {
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <View style={[styles.heroCard, { backgroundColor: inputBackground, borderColor }]}>
           <ThemedText type="title" style={styles.title}>
-            Organizations
+            {t("organizations.title")}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: muted }]}>
-            Create organizations, switch active context, and assign teammates by email.
+            {t("organizations.subtitle")}
           </ThemedText>
 
           <View style={styles.contextBlock}>
-            <ThemedText type="defaultSemiBold">Active organization</ThemedText>
+            <ThemedText type="defaultSemiBold">
+              {t("organizations.activeOrganizationLabel")}
+            </ThemedText>
             <ThemedText selectable>
-              {activeOrganization ? activeOrganization.name : "No active organization selected."}
+              {activeOrganization
+                ? activeOrganization.name
+                : t("organizations.noActiveOrganization")}
             </ThemedText>
             <ThemedText selectable style={{ color: muted }}>
               {activeMembership
-                ? `Role: ${activeMembership.role} · Org ID: ${activeMembership.orgId}`
-                : "Create an organization or accept an invitation to begin."}
+                ? t("organizations.roleAndOrgId", {
+                    role: formatRoleLabel(activeMembership.role),
+                    orgId: activeMembership.orgId,
+                  })
+                : t("organizations.noContextMessage")}
             </ThemedText>
           </View>
         </View>
@@ -264,11 +278,11 @@ export default function OrganizationsScreen() {
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Switch Organization
+            {t("organizations.switchTitle")}
           </ThemedText>
           {memberships.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: inputBackground, borderColor }]}>
-              <ThemedText selectable>No memberships found yet.</ThemedText>
+              <ThemedText selectable>{t("organizations.membershipsEmpty")}</ThemedText>
             </View>
           ) : (
             <View style={styles.membershipList}>
@@ -289,7 +303,7 @@ export default function OrganizationsScreen() {
                       {membership.orgName}
                     </ThemedText>
                     <ThemedText selectable style={{ color: muted }}>
-                      {membership.role} · {membership.orgId}
+                      {formatRoleLabel(membership.role)} · {membership.orgId}
                     </ThemedText>
                   </Pressable>
                 );
@@ -300,19 +314,19 @@ export default function OrganizationsScreen() {
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Create Organization
+            {t("organizations.createTitle")}
           </ThemedText>
 
-          <FieldLabel label="Organization Name" />
+          <FieldLabel label={t("organizations.fields.organizationName")} />
           <TextInput
             value={organizationForm.name}
             onChangeText={(value) => {
               setOrganizationForm((current) => ({ ...current, name: value }));
               setOrganizationErrors((current) => ({ ...current, name: undefined }));
             }}
-            placeholder="Northwind Retail"
+            placeholder={t("organizations.placeholders.organizationName")}
             placeholderTextColor={muted}
-            accessibilityLabel="Organization name"
+            accessibilityLabel={t("organizations.fields.organizationName")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -320,18 +334,18 @@ export default function OrganizationsScreen() {
           />
           <FieldError message={organizationErrors.name} />
 
-          <FieldLabel label="Description" />
+          <FieldLabel label={t("organizations.fields.description")} />
           <TextInput
             value={organizationForm.description}
             onChangeText={(value) =>
               setOrganizationForm((current) => ({ ...current, description: value }))
             }
-            placeholder="Short description for internal context"
+            placeholder={t("organizations.placeholders.description")}
             placeholderTextColor={muted}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            accessibilityLabel="Organization description"
+            accessibilityLabel={t("organizations.fields.description")}
             style={[
               styles.input,
               styles.multiline,
@@ -349,17 +363,19 @@ export default function OrganizationsScreen() {
             {isCreating ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <ThemedText style={styles.primaryButtonText}>Create Organization</ThemedText>
+              <ThemedText style={styles.primaryButtonText}>
+                {t("organizations.buttons.create")}
+              </ThemedText>
             )}
           </Pressable>
         </View>
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Assign User by Email
+            {t("organizations.assignTitle")}
           </ThemedText>
 
-          <FieldLabel label="Target Organization" />
+          <FieldLabel label={t("organizations.fields.targetOrganization")} />
           <View style={styles.membershipList}>
             {memberships.map((membership) => {
               const selected = membership.orgId === assignmentForm.organizationId;
@@ -384,7 +400,7 @@ export default function OrganizationsScreen() {
                     {membership.orgName}
                   </ThemedText>
                   <ThemedText selectable style={{ color: muted }}>
-                    {membership.role}
+                    {formatRoleLabel(membership.role)}
                   </ThemedText>
                 </Pressable>
               );
@@ -392,7 +408,7 @@ export default function OrganizationsScreen() {
           </View>
           <FieldError message={assignmentErrors.organizationId} />
 
-          <FieldLabel label="Email" />
+          <FieldLabel label={t("organizations.fields.email")} />
           <TextInput
             value={assignmentForm.email}
             onChangeText={(value) => {
@@ -401,9 +417,9 @@ export default function OrganizationsScreen() {
             }}
             autoCapitalize="none"
             keyboardType="email-address"
-            placeholder="manager@northwind.example"
+            placeholder={t("organizations.placeholders.assigneeEmail")}
             placeholderTextColor={muted}
-            accessibilityLabel="Assignee email"
+            accessibilityLabel={t("organizations.fields.email")}
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
@@ -411,7 +427,7 @@ export default function OrganizationsScreen() {
           />
           <FieldError message={assignmentErrors.email} />
 
-          <FieldLabel label="Role" />
+          <FieldLabel label={t("organizations.fields.role")} />
           <View style={styles.roleRow}>
             {ASSIGNABLE_ROLES.map((role) => {
               const selected = assignmentForm.role === role;
@@ -427,7 +443,7 @@ export default function OrganizationsScreen() {
                     },
                   ]}>
                   <ThemedText style={{ color: selected ? "#ffffff" : textColor }}>
-                    {role}
+                    {formatRoleLabel(role)}
                   </ThemedText>
                 </Pressable>
               );
@@ -448,7 +464,9 @@ export default function OrganizationsScreen() {
             {isAssigning ? (
               <ActivityIndicator color={accentColor} />
             ) : (
-              <ThemedText style={{ color: accentColor, fontWeight: "700" }}>Assign User</ThemedText>
+              <ThemedText style={{ color: accentColor, fontWeight: "700" }}>
+                {t("organizations.buttons.assign")}
+              </ThemedText>
             )}
           </Pressable>
         </View>

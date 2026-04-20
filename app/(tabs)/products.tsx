@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } fro
 import { ProductSelector } from "@/components/product-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -101,7 +102,7 @@ export default function ProductsScreen() {
         );
         setNextCursor(response.nextCursor);
       } catch (error) {
-        setScreenError(error instanceof Error ? error.message : "Unable to load products.");
+        setScreenError(error instanceof Error ? error.message : t("products.loadError"));
       } finally {
         if (mode === "initial") {
           setIsLoadingInitial(false);
@@ -141,7 +142,7 @@ export default function ProductsScreen() {
 
     if (existsInCurrentPage) {
       setHighlightedProductId(product.id);
-      showToast(`${product.name} is highlighted in the list below.`, "success");
+      showToast(t("products.highlightedToast", { name: product.name }), "success");
       return;
     }
 
@@ -154,12 +155,12 @@ export default function ProductsScreen() {
     }
 
     Alert.alert(
-      "Inactivate product",
-      `This will hide ${product.name} from active catalog pages. Continue?`,
+      t("products.softDeleteAlertTitle"),
+      t("products.softDeleteAlertBody", { name: product.name }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("products.softDeleteCancel"), style: "cancel" },
         {
-          text: "Inactivate",
+          text: t("products.softDeleteConfirm"),
           style: "destructive",
           onPress: () => {
             void (async () => {
@@ -170,7 +171,7 @@ export default function ProductsScreen() {
                   {
                     productId: product.id,
                     isActive: false,
-                    reason: "Soft delete from products catalog",
+                    reason: t("products.softDeleteReason"),
                   },
                   user,
                   activeOrganizationId,
@@ -180,12 +181,10 @@ export default function ProductsScreen() {
                 if (highlightedProductId === product.id) {
                   setHighlightedProductId(null);
                 }
-                showToast(`${product.name} was inactivated.`, "success");
+                showToast(t("products.inactivatedToast", { name: product.name }), "success");
               } catch (error) {
                 showToast(
-                  error instanceof Error
-                    ? error.message
-                    : "Unable to inactivate product right now.",
+                  error instanceof Error ? error.message : t("products.inactivateError"),
                   "error",
                 );
               } finally {
@@ -215,22 +214,22 @@ export default function ProductsScreen() {
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
           <ThemedText type="title" style={styles.title}>
-            Products
+            {t("products.title")}
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: muted }]}>
-            Browse and maintain your active product catalog with cursor-based pagination.
+            {t("products.subtitle")}
           </ThemedText>
           <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
             {activeOrganization
-              ? `Active org: ${activeOrganization.name}`
-              : "No active organization selected. Open Organizations from the drawer first."}
+              ? t("common.activeOrgOnly", { name: activeOrganization.name })
+              : t("common.noActiveOrgSelected")}
           </ThemedText>
         </View>
 
         {!activeOrganization ? (
           <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="defaultSemiBold">Organization required</ThemedText>
-            <ThemedText selectable>Select an organization before browsing products.</ThemedText>
+            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
+            <ThemedText selectable>{t("products.noActiveOrganization")}</ThemedText>
           </View>
         ) : (
           <>
@@ -240,12 +239,12 @@ export default function ProductsScreen() {
               onQueryChange={setSelectorQuery}
               onSelectProduct={handleSelectorPick}
               refreshToken={searchRefreshToken}
-              actionLabel="Open"
-              emptyMessage="No active products match this search."
+              actionLabel={t("products.selectorAction")}
+              emptyMessage={t("products.selectorEmpty")}
             />
 
             <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle">Active Products</ThemedText>
+              <ThemedText type="subtitle">{t("products.sectionTitle")}</ThemedText>
               <Pressable
                 onPress={() => void loadProducts("refresh")}
                 disabled={isRefreshing || isLoadingInitial}
@@ -260,7 +259,7 @@ export default function ProductsScreen() {
                 {isRefreshing ? (
                   <ActivityIndicator size="small" />
                 ) : (
-                  <ThemedText type="defaultSemiBold">Refresh</ThemedText>
+                  <ThemedText type="defaultSemiBold">{t("products.refresh")}</ThemedText>
                 )}
               </Pressable>
             </View>
@@ -279,7 +278,7 @@ export default function ProductsScreen() {
 
             {!isLoadingInitial && products.length === 0 ? (
               <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-                <ThemedText selectable>No active products found yet.</ThemedText>
+                <ThemedText selectable>{t("products.empty")}</ThemedText>
               </View>
             ) : null}
 
@@ -296,10 +295,10 @@ export default function ProductsScreen() {
                       : borderColor;
                 const stockStatusLabel =
                   stockState === "error"
-                    ? "Out of stock"
+                    ? t("products.stockState.out")
                     : stockState === "warning"
-                      ? "Low stock"
-                      : "In stock";
+                      ? t("products.stockState.low")
+                      : t("products.stockState.in");
 
                 return (
                   <View
@@ -339,15 +338,24 @@ export default function ProductsScreen() {
                         </View>
                       </View>
                       <ThemedText selectable style={{ color: muted }}>
-                        SKU: {product.sku}
-                        {product.barcode ? ` · Barcode: ${product.barcode}` : ""}
+                        {t("products.lineSkuBarcode", {
+                          sku: product.sku,
+                          barcode: product.barcode
+                            ? t("products.barcodeSuffix", { barcode: product.barcode })
+                            : "",
+                        })}
                       </ThemedText>
                       <ThemedText selectable style={{ color: muted }}>
-                        Stock: {product.currentStock} · Threshold: {product.stockThreshold}
+                        {t("products.lineStock", {
+                          stock: product.currentStock,
+                          threshold: product.stockThreshold,
+                        })}
                       </ThemedText>
                       <ThemedText selectable style={{ color: muted }}>
-                        Selling price: ${product.salePrice.toFixed(2)} · Unit:{" "}
-                        {product.measurementUnit}
+                        {t("products.lineSalePrice", {
+                          price: product.salePrice.toFixed(2),
+                          unit: product.measurementUnit,
+                        })}
                       </ThemedText>
                     </View>
 
@@ -362,7 +370,7 @@ export default function ProductsScreen() {
                             opacity: pressed ? 0.82 : 1,
                           },
                         ]}>
-                        <ThemedText type="defaultSemiBold">Edit</ThemedText>
+                        <ThemedText type="defaultSemiBold">{t("products.edit")}</ThemedText>
                       </Pressable>
 
                       <Pressable
@@ -380,7 +388,7 @@ export default function ProductsScreen() {
                           <ActivityIndicator size="small" />
                         ) : (
                           <ThemedText type="defaultSemiBold" style={{ color: dangerColor }}>
-                            Inactivate
+                            {t("products.inactivate")}
                           </ThemedText>
                         )}
                       </Pressable>
@@ -404,7 +412,7 @@ export default function ProductsScreen() {
                 {isLoadingNext ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <ThemedText style={styles.loadMoreText}>Load 20 more</ThemedText>
+                  <ThemedText style={styles.loadMoreText}>{t("products.loadMore")}</ThemedText>
                 )}
               </Pressable>
             ) : null}

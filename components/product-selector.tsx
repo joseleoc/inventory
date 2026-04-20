@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { searchProducts, type ProductLookupItem } from "@/services/sales";
 import { debounce } from "@/utils/debounce";
@@ -27,10 +28,10 @@ export function ProductSelector({
   onQueryChange,
   onSelectProduct,
   refreshToken = 0,
-  label = "Search by name, SKU, or barcode",
-  placeholder = "Type name, SKU, or barcode",
-  actionLabel = "Select",
-  emptyMessage = "No products found for this search.",
+  label = t("productSelector.defaultLabel"),
+  placeholder = t("productSelector.defaultPlaceholder"),
+  actionLabel = t("productSelector.defaultAction"),
+  emptyMessage = t("productSelector.defaultEmpty"),
   hideResultsWhenEmptyQuery = true,
   actionDisabled = false,
   inputAccessory,
@@ -75,7 +76,7 @@ export function ProductSelector({
             return;
           }
 
-          setSearchError(error instanceof Error ? error.message : "Unable to search products.");
+          setSearchError(error instanceof Error ? error.message : t("productSelector.searchError"));
         } finally {
           if (requestTokenRef.current === requestToken) {
             setIsSearching(false);
@@ -150,11 +151,18 @@ export function ProductSelector({
                   {product.name}
                 </ThemedText>
                 <ThemedText selectable style={{ color: muted }}>
-                  SKU: {product.sku}
-                  {product.barcode ? ` · Barcode: ${product.barcode}` : ""}
+                  {t("productSelector.lineSkuBarcode", {
+                    sku: product.sku,
+                    barcode: product.barcode
+                      ? t("productSelector.barcodeSuffix", { barcode: product.barcode })
+                      : "",
+                  })}
                 </ThemedText>
                 <ThemedText selectable style={{ color: muted }}>
-                  Stock: {product.currentStock} · Price: ${product.unitPrice.toFixed(2)}
+                  {t("productSelector.lineStockPrice", {
+                    stock: product.currentStock,
+                    price: product.unitPrice.toFixed(2),
+                  })}
                 </ThemedText>
               </View>
 
