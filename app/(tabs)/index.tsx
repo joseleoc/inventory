@@ -1,98 +1,139 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { useThemeColor } from "@/hooks/use-theme-color";
+
+type HomeCta = {
+  title: string;
+  description: string;
+  href: "/(tabs)/products" | "/(tabs)/add-product" | "/(tabs)/sales" | "/(tabs)/organizations";
+  buttonLabel: string;
+};
+
+const CTA_ITEMS: HomeCta[] = [
+  {
+    title: "Products Catalog",
+    description: "Browse products, inspect stock state, and open product edit/restock details.",
+    href: "/(tabs)/products",
+    buttonLabel: "Open Products",
+  },
+  {
+    title: "Add Product",
+    description: "Create a new product with buying, selling, unit, and stock information.",
+    href: "/(tabs)/add-product",
+    buttonLabel: "Create Product",
+  },
+  {
+    title: "Sales",
+    description: "Create supermarket-style carts and complete checkout with scanner support.",
+    href: "/(tabs)/sales",
+    buttonLabel: "Go to Sales",
+  },
+  {
+    title: "Organizations",
+    description:
+      "Switch organization context and manage users with organization-level permissions.",
+    href: "/(tabs)/organizations",
+    buttonLabel: "Manage Organizations",
+  },
+];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const background = useThemeColor({}, "background");
+  const text = useThemeColor({}, "text");
+  const tint = useThemeColor({}, "tint");
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const panelBackground = background === "#fff" ? "#F4F7FA" : "#1D2227";
+  const borderColor = background === "#fff" ? "#D8E0E8" : "#2C333A";
+
+  return (
+    <ThemedView style={styles.page}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+        <View style={[styles.heroCard, { backgroundColor: panelBackground, borderColor }]}>
+          <ThemedText type="title" style={styles.title}>
+            Inventory Dashboard
+          </ThemedText>
+          <ThemedText style={styles.subtitle} selectable>
+            Quick actions to jump into catalog management, stock intake, sales checkout, and
+            organization administration.
+          </ThemedText>
+        </View>
+
+        <View style={styles.cardsWrap}>
+          {CTA_ITEMS.map((item) => (
+            <View
+              key={item.href}
+              style={[styles.card, { backgroundColor: panelBackground, borderColor }]}>
+              <View style={styles.cardTextBlock}>
+                <ThemedText type="subtitle">{item.title}</ThemedText>
+                <ThemedText style={{ color: text }} selectable>
+                  {item.description}
+                </ThemedText>
+              </View>
+
+              <Pressable
+                onPress={() => router.push(item.href)}
+                style={({ pressed }) => [
+                  styles.cardButton,
+                  {
+                    backgroundColor: tint,
+                    opacity: pressed ? 0.82 : 1,
+                  },
+                ]}>
+                <ThemedText style={styles.cardButtonText}>{item.buttonLabel}</ThemedText>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  page: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+    gap: 14,
+  },
+  heroCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    lineHeight: 34,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  cardsWrap: {
+    gap: 10,
+  },
+  card: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+  },
+  cardTextBlock: {
+    gap: 4,
+  },
+  cardButton: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  cardButtonText: {
+    color: "#000000",
+    fontWeight: "700",
   },
 });

@@ -77,15 +77,6 @@ export default function TabLayout() {
           }}
         />
         <Drawer.Screen
-          name="explore"
-          options={{
-            title: "Explore",
-            drawerIcon: ({ color }: { color: string }) => (
-              <IconSymbol size={24} name="paperplane.fill" color={color} />
-            ),
-          }}
-        />
-        <Drawer.Screen
           name="add-product"
           options={{
             title: "Add Product",
