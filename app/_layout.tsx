@@ -9,6 +9,7 @@ import "react-native-reanimated";
 import { ThemedView } from "@/components/themed-view";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
+import { useOrganizationStore } from "@/stores/organization-store";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -18,9 +19,17 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const segments = useSegments();
+  const topSegment = segments[0];
+  const secondSegment = segments[1];
   const user = useAuthStore((state) => state.user);
   const isInitializing = useAuthStore((state) => state.isInitializing);
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const initializeOrganizationContext = useOrganizationStore(
+    (state) => state.initializeOrganizationContext,
+  );
+  const clearOrganizationContext = useOrganizationStore((state) => state.clearOrganizationContext);
+  const isOrganizationInitializing = useOrganizationStore((state) => state.isInitializing);
+  const activeOrganization = useOrganizationStore((state) => state.activeOrganization);
 
   useEffect(() => {
     const unsubscribe = initializeAuth();
@@ -30,11 +39,20 @@ export default function RootLayout() {
   }, [initializeAuth]);
 
   useEffect(() => {
-    if (isInitializing) {
+    if (!user) {
+      clearOrganizationContext();
       return;
     }
 
-    const inAuthGroup = segments[0] === "(auth)";
+    void initializeOrganizationContext(user);
+  }, [clearOrganizationContext, initializeOrganizationContext, user]);
+
+  useEffect(() => {
+    if (isInitializing || (user && isOrganizationInitializing)) {
+      return;
+    }
+
+    const inAuthGroup = topSegment === "(auth)";
 
     if (!user && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -42,11 +60,24 @@ export default function RootLayout() {
     }
 
     if (user && inAuthGroup) {
-      router.replace("/(tabs)");
+      router.replace(activeOrganization ? "/(tabs)" : "/(tabs)/organizations");
+      return;
     }
-  }, [isInitializing, router, segments, user]);
 
-  if (isInitializing) {
+    if (user && !inAuthGroup && !activeOrganization && secondSegment !== "organizations") {
+      router.replace("/(tabs)/organizations");
+    }
+  }, [
+    activeOrganization,
+    isInitializing,
+    isOrganizationInitializing,
+    router,
+    secondSegment,
+    topSegment,
+    user,
+  ]);
+
+  if (isInitializing || (user && isOrganizationInitializing)) {
     return (
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <ThemedView style={styles.centered}>

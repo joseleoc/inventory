@@ -379,6 +379,93 @@ Rules:
 
 - Append-only: no client update/delete.
 
+### 8.6 Organization Management Extension
+
+To support multi-organization access, organization switching, and assignment by email, extend the data model with the following collections and user-profile fields.
+
+#### `organizations` Collection
+
+Purpose: top-level tenant records that define the business/account boundary.
+
+| Field         | Type      | Required | Notes                             |
+| ------------- | --------- | -------: | --------------------------------- |
+| `name`        | string    |      Yes | Organization display name         |
+| `description` | string    |       No | Optional admin-facing description |
+| `is_active`   | boolean   |      Yes | Soft-active state                 |
+| `created_by`  | string    |      Yes | Firebase `uid` of creator         |
+| `updated_by`  | string    |      Yes | Firebase `uid` of last editor     |
+| `created_at`  | timestamp |      Yes | Server timestamp                  |
+| `updated_at`  | timestamp |      Yes | Server timestamp                  |
+
+Recommended constraints:
+
+- Create documents only from authenticated admin/owner flows.
+- Treat the document ID as the canonical tenant key referenced by memberships, invitations, and product records.
+
+#### `organization_members` Collection
+
+Purpose: many-to-many mapping between Firebase users and organizations.
+
+Recommended document ID: `${org_id}_${user_id}` to prevent duplicate active memberships.
+
+| Field        | Type      | Required | Notes                                                   |
+| ------------ | --------- | -------: | ------------------------------------------------------- |
+| `org_id`     | string    |      Yes | Reference to `organizations/{id}`                       |
+| `user_id`    | string    |      Yes | Firebase `uid`                                          |
+| `email`      | string    |      Yes | Normalized email snapshot for admin workflows           |
+| `role`       | string    |      Yes | One of `owner`, `admin`, `manager`, `cashier`, `viewer` |
+| `status`     | string    |      Yes | `active` or `pending`                                   |
+| `invited_by` | string    |      Yes | Firebase `uid` of assigner                              |
+| `joined_at`  | timestamp |       No | Set when membership becomes active                      |
+| `created_at` | timestamp |      Yes | Server timestamp                                        |
+| `updated_at` | timestamp |      Yes | Server timestamp                                        |
+
+Recommended constraints:
+
+- Unique logical membership key: `(org_id, user_id)`.
+- Query frequently by `user_id + status` to hydrate app organization context after login.
+- Query by `org_id + role` for administrative member listings.
+
+#### `organization_invitations` Collection
+
+Purpose: pending organization assignments for emails that are not yet linked to an existing user profile.
+
+Recommended document ID: `${org_id}_${email_lower}` to avoid duplicate pending invites for the same org/email pair.
+
+| Field         | Type      | Required | Notes                                          |
+| ------------- | --------- | -------: | ---------------------------------------------- |
+| `org_id`      | string    |      Yes | Reference to `organizations/{id}`              |
+| `email`       | string    |      Yes | Canonical invite target                        |
+| `email_lower` | string    |      Yes | Lowercased email for lookup                    |
+| `role`        | string    |      Yes | Assigned role on acceptance                    |
+| `status`      | string    |      Yes | `pending`, `accepted`, `revoked`, or `expired` |
+| `invited_by`  | string    |      Yes | Firebase `uid` of assigner                     |
+| `created_at`  | timestamp |      Yes | Server timestamp                               |
+| `updated_at`  | timestamp |      Yes | Server timestamp                               |
+
+Recommended constraints:
+
+- Unique logical invite key: `(org_id, email_lower)` while status is pending.
+- On signup or first login, resolve any matching pending invitation and materialize an active `organization_members` document.
+
+#### `users` Collection Extension
+
+Keep `users/{uid}` as the identity-profile anchor, but extend it for multi-organization context.
+
+Additional recommended fields:
+
+| Field            | Type   | Required | Notes                                        |
+| ---------------- | ------ | -------: | -------------------------------------------- |
+| `email_lower`    | string |      Yes | Lowercased email for deterministic lookup    |
+| `primary_org_id` | string |       No | First or default organization for the user   |
+| `active_org_id`  | string |       No | Current client-selected organization context |
+
+Operational notes:
+
+- Resolve app organization context after login by reading `users/{uid}` plus active `organization_members` records.
+- Persist active organization switching by updating `users.active_org_id`.
+- Do not store all memberships redundantly on the user profile if `organization_members` is the source of truth.
+
 ## 9. Firestore Indexing Plan
 
 Create composite indexes for common filtered/sorted queries:
@@ -416,6 +503,31 @@ Create composite indexes for common filtered/sorted queries:
     "fields": [
       { "fieldPath": "org_id", "order": "ASCENDING" },
       { "fieldPath": "created_at", "order": "DESCENDING" }
+    ]
+  },
+  {
+    "collectionGroup": "organization_members",
+    "queryScope": "COLLECTION",
+    "fields": [
+      { "fieldPath": "user_id", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" }
+    ]
+  },
+  {
+    "collectionGroup": "organization_members",
+    "queryScope": "COLLECTION",
+    "fields": [
+      { "fieldPath": "org_id", "order": "ASCENDING" },
+      { "fieldPath": "role", "order": "ASCENDING" }
+    ]
+  },
+  {
+    "collectionGroup": "organization_invitations",
+    "queryScope": "COLLECTION",
+    "fields": [
+      { "fieldPath": "org_id", "order": "ASCENDING" },
+      { "fieldPath": "email_lower", "order": "ASCENDING" },
+      { "fieldPath": "status", "order": "ASCENDING" }
     ]
   }
 ]
@@ -661,6 +773,15 @@ service cloud.firestore {
 
     function immutableOnUpdate(field) {
       return request.resource.data[field] == resource.data[field];
+    }
+
+    // ORGANIZATIONS
+    match /organizations/{organizationId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && isAdmin()
+                    && request.resource.data.created_by == request.auth.uid;
+      allow update, delete: if signedIn() && isAdmin();
     }
 
     // PRODUCTS

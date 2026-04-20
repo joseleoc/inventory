@@ -13,6 +13,7 @@ import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { createProduct, type ProductCreateInput } from "@/services/products";
 import { useAuthStore } from "@/stores/auth-store";
+import { useOrganizationStore } from "@/stores/organization-store";
 
 type FormState = {
   sku: string;
@@ -122,6 +123,8 @@ function FieldLabel({ label }: { label: string }) {
 
 export default function AddProductScreen() {
   const user = useAuthStore((state) => state.user);
+  const activeOrganization = useOrganizationStore((state) => state.activeOrganization);
+  const activeMembership = useOrganizationStore((state) => state.activeMembership);
   const [formState, setFormState] = useState<FormState>(INITIAL_STATE);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,7 +155,7 @@ export default function AddProductScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!user || isSubmitting) {
+    if (!user || !activeOrganization || isSubmitting) {
       return;
     }
 
@@ -180,6 +183,7 @@ export default function AddProductScreen() {
           unitPrice: parsed.unitPrice,
         },
         user,
+        activeOrganization.id,
       );
 
       setSubmitSuccess("Product added successfully.");
@@ -213,7 +217,21 @@ export default function AddProductScreen() {
           <ThemedText style={[styles.subtitle, { color: muted }]}>
             Create a product in your organization inventory catalog.
           </ThemedText>
+          <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
+            {activeOrganization
+              ? `Active org: ${activeOrganization.name} · ${activeMembership?.role ?? "member"}`
+              : "No active organization selected. Open Organizations from the drawer first."}
+          </ThemedText>
         </View>
+
+        {!activeOrganization ? (
+          <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
+            <ThemedText type="defaultSemiBold">Organization required</ThemedText>
+            <ThemedText selectable>
+              Create or switch to an active organization before adding products.
+            </ThemedText>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -350,10 +368,13 @@ export default function AddProductScreen() {
 
         <Pressable
           onPress={handleSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !activeOrganization}
           style={({ pressed }) => [
             styles.submitButton,
-            { backgroundColor: accentColor, opacity: pressed || isSubmitting ? 0.8 : 1 },
+            {
+              backgroundColor: accentColor,
+              opacity: pressed || isSubmitting || !activeOrganization ? 0.8 : 1,
+            },
           ]}>
           {isSubmitting ? (
             <ActivityIndicator color="#ffffff" />
@@ -401,6 +422,12 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 14,
     lineHeight: 18,
+  },
+  noticeCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 6,
   },
   input: {
     borderWidth: 1,

@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function orgId() {
+      return request.auth.token.orgId;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function profileRole() {
+      return signedIn()
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             : null;
+    }
+
+    function sameOrgFromResource() {
+      return signedIn() && resource.data.org_id == orgId();
+    }
+
+    function sameOrgFromRequest() {
+      return signedIn() && request.resource.data.org_id == orgId();
+    }
+
+    function isViewer() {
+      return role() in ['viewer', 'cashier', 'manager', 'admin'];
+    }
+
+    function isCashier() {
+      return role() in ['cashier', 'manager', 'admin'];
+    }
+
+    function isManager() {
+      return role() in ['manager', 'admin'];
+    }
+
+    function isAdmin() {
+      return role() == 'admin' || profileRole() == 'admin';
+    }
+
+    function immutableOnUpdate(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
+    // ORGANIZATIONS
+    // Create is restricted to authenticated admins only.
+    match /organizations/{organizationId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && isAdmin()
+                    && request.resource.data.created_by == request.auth.uid;
+      allow update, delete: if signedIn() && isAdmin();
+    }
+
+    // ORGANIZATION_MEMBERS
+    match /organization_members/{membershipId} {
+      allow read: if signedIn() && (
+                    resource.data.user_id == request.auth.uid
+                    || isAdmin()
+                  );
+      allow create, update, delete: if signedIn() && isAdmin();
+    }
+
+    // ORGANIZATION_INVITATIONS
+    match /organization_invitations/{invitationId} {
+      allow read: if signedIn() && isAdmin();
+      allow create, update, delete: if signedIn() && isAdmin();
+    }
+
+    // PRODUCTS
+    match /products/{productId} {
+      allow read: if sameOrgFromResource() && isViewer();
+      allow create: if sameOrgFromRequest() && isManager();
+      allow update: if sameOrgFromResource()
+                    && sameOrgFromRequest()
+                    && isManager()
+                    && immutableOnUpdate('created_at')
+                    && immutableOnUpdate('created_by');
+      allow delete: if sameOrgFromResource() && isAdmin();
+    }
+
+    // SALES (append-only)
+    match /sales/{saleId} {
+      allow read: if sameOrgFromResource() && isCashier();
+      allow create: if sameOrgFromRequest()
+                    && isCashier()
+                    && request.resource.data.sold_by == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // RESTOCK_LOGS (append-only)
+    match /restock_logs/{restockId} {
+      allow read: if sameOrgFromResource() && isCashier();
+      allow create: if sameOrgFromRequest()
+                    && isManager()
+                    && request.resource.data.restocked_by == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // USERS
+    match /users/{uid} {
+      allow read: if signedIn()
+                  && (
+                    uid == request.auth.uid
+                    || (sameOrgFromResource() && isManager())
+                  );
+
+      allow create: if signedIn()
+                    && uid == request.auth.uid
+                    && request.resource.data.role in ['admin', 'viewer'];
+
+      allow update: if signedIn() && (
+                    (uid == request.auth.uid
+                      && immutableOnUpdate('role'))
+                    ||
+                    (sameOrgFromResource() && sameOrgFromRequest() && isAdmin())
+                  );
+
+      allow delete: if sameOrgFromResource() && isAdmin();
+    }
+
+    // AUDIT_LOGS (append-only)
+    match /audit_logs/{auditId} {
+      allow read: if sameOrgFromResource() && isManager();
+      allow create: if sameOrgFromRequest()
+                    && isCashier()
+                    && request.resource.data.actor_uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

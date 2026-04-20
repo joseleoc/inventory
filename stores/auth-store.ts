@@ -1,14 +1,18 @@
 import { FirebaseError } from "firebase/app";
 import {
-    onAuthStateChanged,
-    sendPasswordResetEmail,
-    signInWithEmailAndPassword,
-    type Unsubscribe,
-    type User,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  type Unsubscribe,
+  type User,
 } from "firebase/auth";
 import { create } from "zustand";
 
 import { firebaseAuth } from "@/config/firebase";
+import { upsertUserProfile } from "@/services/organizations";
 
 type AuthState = {
   user: User | null;
@@ -16,6 +20,8 @@ type AuthState = {
   authError: string | null;
   initializeAuth: () => Unsubscribe;
   signInWithEmailPassword: (email: string, password: string) => Promise<void>;
+  signUpWithEmailPassword: (name: string, email: string, password: string) => Promise<void>;
+  signOutCurrentUser: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   clearAuthError: () => void;
 };
@@ -37,6 +43,12 @@ function getAuthErrorMessage(error: unknown) {
       return "Too many attempts. Please try again later.";
     case "auth/user-not-found":
       return "No account was found for this email.";
+    case "auth/email-already-in-use":
+      return "This email is already in use.";
+    case "auth/weak-password":
+      return "Password is too weak. Please choose a stronger password.";
+    case "auth/operation-not-allowed":
+      return "Email/password sign up is not enabled for this project.";
     default:
       return "Authentication failed. Please try again.";
   }
@@ -73,6 +85,35 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
+    } catch (error) {
+      const message = getAuthErrorMessage(error);
+      set({ authError: message });
+      throw new Error(message);
+    }
+  },
+  signUpWithEmailPassword: async (name, email, password) => {
+    set({ authError: null });
+
+    try {
+      const credentials = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+
+      const displayName = name.trim();
+      if (displayName) {
+        await updateProfile(credentials.user, { displayName });
+      }
+
+      await upsertUserProfile(credentials.user, { defaultRole: "admin" });
+    } catch (error) {
+      const message = getAuthErrorMessage(error);
+      set({ authError: message });
+      throw new Error(message);
+    }
+  },
+  signOutCurrentUser: async () => {
+    set({ authError: null });
+
+    try {
+      await signOut(firebaseAuth);
     } catch (error) {
       const message = getAuthErrorMessage(error);
       set({ authError: message });

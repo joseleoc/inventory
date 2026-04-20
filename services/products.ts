@@ -74,11 +74,8 @@ function mapFirestoreError(error: unknown) {
   }
 }
 
-export async function createProduct(input: ProductCreateInput, user: User) {
-  const tokenResult = await user.getIdTokenResult();
-  const orgId = tokenResult.claims.orgId;
-
-  if (typeof orgId !== "string" || orgId.length === 0) {
+export async function createProduct(input: ProductCreateInput, user: User, orgId: string) {
+  if (!orgId.trim()) {
     throw new Error("Organization context is missing for this account.");
   }
 

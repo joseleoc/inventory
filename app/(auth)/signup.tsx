@@ -11,30 +11,39 @@ import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 
-const loginSchema = z.object({
-  email: z.email("Enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
-});
+const signupSchema = z
+  .object({
+    name: z.string().min(2, "Name must have at least 2 characters."),
+    email: z.email("Enter a valid email address."),
+    password: z.string().min(8, "Password must have at least 8 characters."),
+    confirmPassword: z.string().min(1, "Please confirm your password."),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const authError = useAuthStore((state) => state.authError);
-  const signInWithEmailPassword = useAuthStore((state) => state.signInWithEmailPassword);
+  const signUpWithEmailPassword = useAuthStore((state) => state.signUpWithEmailPassword);
   const clearAuthError = useAuthStore((state) => state.clearAuthError);
 
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -45,9 +54,9 @@ export default function LoginScreen() {
     };
   }, [clearAuthError]);
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = async (values: SignupFormValues) => {
     try {
-      await signInWithEmailPassword(values.email.trim(), values.password);
+      await signUpWithEmailPassword(values.name.trim(), values.email.trim(), values.password);
       router.replace("/(tabs)");
     } catch {
       // Store error state already contains the user-facing message.
@@ -63,11 +72,49 @@ export default function LoginScreen() {
         <View
           style={[styles.card, { backgroundColor: colors.background, borderColor: colors.icon }]}>
           <ThemedText type="title" style={styles.title} selectable>
-            Welcome back
+            Create account
           </ThemedText>
           <ThemedText style={styles.subtitle} selectable>
-            Sign in with your email and password.
+            New accounts are created with the admin role. If you have no organization, you will be
+            redirected to set one up.
           </ThemedText>
+
+          <View style={styles.fieldGroup}>
+            <ThemedText type="defaultSemiBold" selectable>
+              Name
+            </ThemedText>
+            <Controller
+              control={control}
+              name="name"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  textContentType="name"
+                  autoComplete="name"
+                  accessibilityLabel="Name"
+                  editable={!isSubmitting}
+                  placeholder="Jane Doe"
+                  placeholderTextColor={colors.icon}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.text,
+                      borderColor: errors.name ? "#c62828" : colors.icon,
+                    },
+                  ]}
+                />
+              )}
+            />
+            {errors.name ? (
+              <ThemedText style={styles.errorText} selectable>
+                {errors.name.message}
+              </ThemedText>
+            ) : null}
+          </View>
 
           <View style={styles.fieldGroup}>
             <ThemedText type="defaultSemiBold" selectable>
@@ -120,11 +167,11 @@ export default function LoginScreen() {
                   onChangeText={onChange}
                   onBlur={onBlur}
                   secureTextEntry
-                  textContentType="password"
-                  autoComplete="password"
+                  textContentType="newPassword"
+                  autoComplete="password-new"
                   accessibilityLabel="Password"
                   editable={!isSubmitting}
-                  placeholder="Enter your password"
+                  placeholder="Minimum 8 characters"
                   placeholderTextColor={colors.icon}
                   style={[
                     styles.input,
@@ -143,6 +190,42 @@ export default function LoginScreen() {
             ) : null}
           </View>
 
+          <View style={styles.fieldGroup}>
+            <ThemedText type="defaultSemiBold" selectable>
+              Confirm Password
+            </ThemedText>
+            <Controller
+              control={control}
+              name="confirmPassword"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  secureTextEntry
+                  textContentType="password"
+                  autoComplete="password-new"
+                  accessibilityLabel="Confirm password"
+                  editable={!isSubmitting}
+                  placeholder="Re-enter your password"
+                  placeholderTextColor={colors.icon}
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.text,
+                      borderColor: errors.confirmPassword ? "#c62828" : colors.icon,
+                    },
+                  ]}
+                />
+              )}
+            />
+            {errors.confirmPassword ? (
+              <ThemedText style={styles.errorText} selectable>
+                {errors.confirmPassword.message}
+              </ThemedText>
+            ) : null}
+          </View>
+
           {authError ? (
             <ThemedText style={styles.errorText} selectable>
               {authError}
@@ -151,7 +234,7 @@ export default function LoginScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Sign in"
+            accessibilityLabel="Create account"
             disabled={isSubmitting}
             onPress={handleSubmit(onSubmit)}
             style={({ pressed }) => [
@@ -159,28 +242,17 @@ export default function LoginScreen() {
               { backgroundColor: colors.tint, opacity: isSubmitting || pressed ? 0.85 : 1 },
             ]}>
             <ThemedText style={styles.buttonText} selectable>
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? "Creating account..." : "Create account"}
             </ThemedText>
           </Pressable>
 
-          <Link href="/(auth)/forgot-password" asChild>
+          <Link href="/(auth)/login" asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Forgot password"
+              accessibilityLabel="Back to login"
               style={styles.linkButton}>
               <ThemedText type="link" style={styles.linkText} selectable>
-                Forgot your password?
-              </ThemedText>
-            </Pressable>
-          </Link>
-
-          <Link href="/(auth)/signup" asChild>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Create account"
-              style={styles.linkButton}>
-              <ThemedText type="link" style={styles.linkText} selectable>
-                Don&apos;t have an account? Create one
+                Already have an account? Sign in
               </ThemedText>
             </Pressable>
           </Link>
