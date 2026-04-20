@@ -136,6 +136,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // PRODUCT_CHANGE_LOGS (append-only)
+    match /product_change_logs/{logId} {
+      allow read: if sameOrgFromResource() && isCashier();
+      allow create: if sameOrgFromRequest()
+                    && isManager()
+                    && request.resource.data.changed_by == request.auth.uid
+                    && request.resource.data.event_type in ['created', 'updated', 'stock_added'];
+      allow update, delete: if false;
+    }
+
     // USERS
     match /users/{uid} {
       allow read: if signedIn()

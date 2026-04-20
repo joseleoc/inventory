@@ -24,7 +24,10 @@ type FormState = {
   category: string;
   currentStock: string;
   stockThreshold: string;
-  unitPrice: string;
+  salePrice: string;
+  purchaseUnitCost: string;
+  purchaseQuantity: string;
+  measurementUnit: string;
 };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
@@ -39,8 +42,13 @@ const INITIAL_STATE: FormState = {
   category: "",
   currentStock: "0",
   stockThreshold: "10",
-  unitPrice: "0",
+  salePrice: "0",
+  purchaseUnitCost: "0",
+  purchaseQuantity: "0",
+  measurementUnit: "unit",
 };
+
+const MEASUREMENT_UNITS = ["unit", "mass", "volume"] as const;
 
 function parseInteger(value: string) {
   if (!/^\d+$/.test(value.trim())) {
@@ -82,13 +90,37 @@ function validateForm(state: FormState) {
     errors.stockThreshold = "Stock threshold must be an integer greater than or equal to 0.";
   }
 
-  const unitPrice = parseNonNegativeNumber(state.unitPrice);
-  if (unitPrice === null) {
-    errors.unitPrice = "Unit price must be a number greater than or equal to 0.";
+  const salePrice = parseNonNegativeNumber(state.salePrice);
+  if (salePrice === null) {
+    errors.salePrice = "Selling price must be a number greater than or equal to 0.";
+  }
+
+  const purchaseUnitCost = parseNonNegativeNumber(state.purchaseUnitCost);
+  if (purchaseUnitCost === null) {
+    errors.purchaseUnitCost = "Purchase unit cost must be a number greater than or equal to 0.";
+  }
+
+  const purchaseQuantity = parseNonNegativeNumber(state.purchaseQuantity);
+  if (purchaseQuantity === null) {
+    errors.purchaseQuantity = "Purchase quantity must be a number greater than or equal to 0.";
+  }
+
+  const normalizedMeasurementUnit = state.measurementUnit.trim().toLowerCase();
+  if (
+    !MEASUREMENT_UNITS.includes(normalizedMeasurementUnit as (typeof MEASUREMENT_UNITS)[number])
+  ) {
+    errors.measurementUnit = "Measurement unit must be one of: unit, mass, or volume.";
   }
 
   const hasErrors = Object.keys(errors).length > 0;
-  if (hasErrors || currentStock === null || stockThreshold === null || unitPrice === null) {
+  if (
+    hasErrors ||
+    currentStock === null ||
+    stockThreshold === null ||
+    salePrice === null ||
+    purchaseUnitCost === null ||
+    purchaseQuantity === null
+  ) {
     return { errors, parsed: null };
   }
 
@@ -100,7 +132,10 @@ function validateForm(state: FormState) {
     category: state.category,
     currentStock,
     stockThreshold,
-    unitPrice,
+    salePrice,
+    purchaseUnitCost,
+    purchaseQuantity,
+    measurementUnit: normalizedMeasurementUnit as (typeof MEASUREMENT_UNITS)[number],
   };
 
   return { errors, parsed };
@@ -181,7 +216,10 @@ export default function AddProductScreen() {
           category: parsed.category,
           currentStock: parsed.currentStock,
           stockThreshold: parsed.stockThreshold,
-          unitPrice: parsed.unitPrice,
+          salePrice: parsed.salePrice,
+          purchaseUnitCost: parsed.purchaseUnitCost,
+          purchaseQuantity: parsed.purchaseQuantity,
+          measurementUnit: parsed.measurementUnit,
         },
         user,
         activeOrganization.id,
@@ -193,6 +231,7 @@ export default function AddProductScreen() {
       setFormState((current) => ({
         ...INITIAL_STATE,
         stockThreshold: current.stockThreshold,
+        measurementUnit: current.measurementUnit,
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to add product right now.";
@@ -300,20 +339,65 @@ export default function AddProductScreen() {
           />
           <FieldError message={errors.stockThreshold} />
 
-          <FieldLabel label="Unit Price" />
+          <FieldLabel label="Selling Price" />
           <TextInput
-            value={formState.unitPrice}
-            onChangeText={(value) => updateField("unitPrice", value)}
-            placeholder="Unit price"
+            value={formState.salePrice}
+            onChangeText={(value) => updateField("salePrice", value)}
+            placeholder="Selling price"
             placeholderTextColor={muted}
             keyboardType="decimal-pad"
-            accessibilityLabel="Unit price"
+            accessibilityLabel="Selling price"
             style={[
               styles.input,
               { color: textColor, backgroundColor: inputBackground, borderColor },
             ]}
           />
-          <FieldError message={errors.unitPrice} />
+          <FieldError message={errors.salePrice} />
+
+          <FieldLabel label="Purchase Unit Cost" />
+          <TextInput
+            value={formState.purchaseUnitCost}
+            onChangeText={(value) => updateField("purchaseUnitCost", value)}
+            placeholder="Purchase unit cost"
+            placeholderTextColor={muted}
+            keyboardType="decimal-pad"
+            accessibilityLabel="Purchase unit cost"
+            style={[
+              styles.input,
+              { color: textColor, backgroundColor: inputBackground, borderColor },
+            ]}
+          />
+          <FieldError message={errors.purchaseUnitCost} />
+
+          <FieldLabel label="Last Purchase Quantity" />
+          <TextInput
+            value={formState.purchaseQuantity}
+            onChangeText={(value) => updateField("purchaseQuantity", value)}
+            placeholder="Last purchase quantity"
+            placeholderTextColor={muted}
+            keyboardType="decimal-pad"
+            accessibilityLabel="Last purchase quantity"
+            style={[
+              styles.input,
+              { color: textColor, backgroundColor: inputBackground, borderColor },
+            ]}
+          />
+          <FieldError message={errors.purchaseQuantity} />
+
+          <FieldLabel label="Measurement Unit (unit, mass, volume)" />
+          <TextInput
+            value={formState.measurementUnit}
+            onChangeText={(value) => updateField("measurementUnit", value)}
+            placeholder="unit"
+            placeholderTextColor={muted}
+            autoCapitalize="none"
+            accessibilityLabel="Measurement unit"
+            style={[
+              styles.input,
+              { color: textColor, backgroundColor: inputBackground, borderColor },
+            ]}
+          />
+          <FieldError message={errors.measurementUnit} />
         </View>
 
         <View style={styles.section}>

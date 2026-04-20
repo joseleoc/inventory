@@ -19,7 +19,8 @@ type ProductLookupDocument = {
   name: string;
   current_stock: number;
   stock_threshold: number;
-  unit_price: number;
+  sale_price?: number;
+  unit_price?: number;
   is_active: boolean;
   updated_at?: unknown;
 };
@@ -88,6 +89,8 @@ function mapFirestoreError(error: unknown, fallbackMessage: string) {
 }
 
 function mapProduct(documentId: string, data: ProductLookupDocument): ProductLookupItem {
+  const sellingPrice = data.sale_price ?? data.unit_price ?? 0;
+
   return {
     id: documentId,
     orgId: data.org_id,
@@ -96,7 +99,7 @@ function mapProduct(documentId: string, data: ProductLookupDocument): ProductLoo
     name: data.name,
     currentStock: data.current_stock,
     stockThreshold: data.stock_threshold,
-    unitPrice: data.unit_price,
+    unitPrice: sellingPrice,
     isActive: data.is_active,
   };
 }
