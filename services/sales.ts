@@ -21,7 +21,7 @@ type ProductLookupDocument = {
   stock_threshold: number;
   sale_price?: number;
   unit_price?: number;
-  is_active?: boolean;
+  is_active: boolean;
   updated_at?: unknown;
 };
 
