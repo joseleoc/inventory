@@ -1,35 +1,41 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Drawer } from "expo-router/drawer";
+import React from "react";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
+    <Drawer
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        headerShown: true,
       }}>
-      <Tabs.Screen
+      <Drawer.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          drawerIcon: ({ color }: { color: string }) => (
+            <IconSymbol size={24} name="house.fill" color={color} />
+          ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Explore",
+          drawerIcon: ({ color }: { color: string }) => (
+            <IconSymbol size={24} name="paperplane.fill" color={color} />
+          ),
         }}
       />
-    </Tabs>
+      <Drawer.Screen
+        name="add-product"
+        options={{
+          title: "Add Product",
+          drawerIcon: ({ color }: { color: string }) => (
+            <IconSymbol size={24} name="plus.circle.fill" color={color} />
+          ),
+        }}
+      />
+    </Drawer>
   );
 }
