@@ -93,6 +93,15 @@ export default function TabLayout() {
         }}
       />
       <Drawer.Screen
+        name="sales"
+        options={{
+          title: "Sales",
+          drawerIcon: ({ color }: { color: string }) => (
+            <IconSymbol size={24} name="cart.fill" color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="organizations"
         options={{
           title: "Organizations",

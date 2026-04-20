@@ -9,6 +9,13 @@ service cloud.firestore {
       return request.auth.token.orgId;
     }
 
+    function profileOrgId() {
+      return signedIn()
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active_org_id
+             : null;
+    }
+
     function role() {
       return request.auth.token.role;
     }
@@ -21,11 +28,17 @@ service cloud.firestore {
     }
 
     function sameOrgFromResource() {
-      return signedIn() && resource.data.org_id == orgId();
+      return signedIn() && (
+               resource.data.org_id == orgId()
+               || resource.data.org_id == profileOrgId()
+             );
     }
 
     function sameOrgFromRequest() {
-      return signedIn() && request.resource.data.org_id == orgId();
+      return signedIn() && (
+               request.resource.data.org_id == orgId()
+               || request.resource.data.org_id == profileOrgId()
+             );
     }
 
     function isViewer() {
@@ -46,6 +59,18 @@ service cloud.firestore {
 
     function immutableOnUpdate(field) {
       return request.resource.data[field] == resource.data[field];
+    }
+
+    function cashierStockMutationOnly() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+               'current_stock',
+               'updated_at',
+               'updated_by'
+             ])
+             && request.resource.data.current_stock is int
+             && request.resource.data.current_stock >= 0
+             && request.resource.data.current_stock <= resource.data.current_stock
+             && request.resource.data.updated_by == request.auth.uid;
     }
 
     // ORGANIZATIONS
@@ -79,9 +104,18 @@ service cloud.firestore {
       allow create: if sameOrgFromRequest() && isManager();
       allow update: if sameOrgFromResource()
                     && sameOrgFromRequest()
-                    && isManager()
-                    && immutableOnUpdate('created_at')
-                    && immutableOnUpdate('created_by');
+                    && (
+                      (
+                        isManager()
+                        && immutableOnUpdate('created_at')
+                        && immutableOnUpdate('created_by')
+                      )
+                      ||
+                      (
+                        isCashier()
+                        && cashierStockMutationOnly()
+                      )
+                    );
       allow delete: if sameOrgFromResource() && isAdmin();
     }
 
