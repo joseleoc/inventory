@@ -2,11 +2,12 @@ import { type User } from "firebase/auth";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
+import { BarcodeScannerInputMolecule } from "@/components/molecules/barcode-scanner-input-molecule";
 import { LabeledInputFieldMolecule } from "@/components/molecules/labeled-input-field-molecule";
 import {
-    isValidMeasurementUnit,
-    parseInteger,
-    parseNonNegativeNumber,
+  isValidMeasurementUnit,
+  parseInteger,
+  parseNonNegativeNumber,
 } from "@/components/organisms/product-form-helpers";
 import { ThemedText } from "@/components/themed-text";
 import { t } from "@/config/i18n";
@@ -168,7 +169,7 @@ export function StandardProductDetailsFormOrganism({
         placeholder={t("productDetails.placeholders.productName")}
       />
 
-      <LabeledInputFieldMolecule
+      <BarcodeScannerInputMolecule
         label={t("productDetails.fields.barcode")}
         value={formState.barcode}
         onChangeText={(value) => updateField("barcode", value)}

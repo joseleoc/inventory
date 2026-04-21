@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { FormFieldErrorAtom } from "@/components/atoms/form-field-error-atom";
+import { BarcodeScannerInputMolecule } from "@/components/molecules/barcode-scanner-input-molecule";
 import {
     CompoundIngredientItemMolecule,
     type CompoundIngredientDraft,
@@ -348,7 +349,7 @@ export function CompoundProductDetailsFormOrganism({
           {t("productDetails.detailsSection")}
         </ThemedText>
 
-        <LabeledInputFieldMolecule
+        <BarcodeScannerInputMolecule
           label={t("productDetails.fields.barcode")}
           value={formState.barcode}
           onChangeText={(value) => updateField("barcode", value)}
