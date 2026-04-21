@@ -39,6 +39,30 @@ const en = {
   settings: {
     title: "Settings",
     subtitle: "Manage your account session and app preferences.",
+    userCard: {
+      title: "User Info",
+      name: "Name",
+      email: "Email",
+      uid: "User ID",
+      notAvailable: "Not available",
+    },
+    theme: {
+      title: "Theme",
+      subtitle: "Pick how the app appearance should behave.",
+      options: {
+        system: "System",
+        light: "Light",
+        dark: "Dark",
+      },
+    },
+    language: {
+      title: "Language",
+      subtitle: "Choose your preferred app language.",
+      options: {
+        en: "English",
+        es: "Spanish",
+      },
+    },
     logOut: "Log out",
     logOutA11y: "Log out",
   },

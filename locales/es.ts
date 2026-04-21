@@ -39,6 +39,30 @@ const es = {
   settings: {
     title: "Configuracion",
     subtitle: "Gestiona tu sesion y preferencias de la aplicacion.",
+    userCard: {
+      title: "Informacion del usuario",
+      name: "Nombre",
+      email: "Correo",
+      uid: "ID de usuario",
+      notAvailable: "No disponible",
+    },
+    theme: {
+      title: "Tema",
+      subtitle: "Elige como se debe mostrar la apariencia de la app.",
+      options: {
+        system: "Sistema",
+        light: "Claro",
+        dark: "Oscuro",
+      },
+    },
+    language: {
+      title: "Idioma",
+      subtitle: "Selecciona tu idioma preferido para la aplicacion.",
+      options: {
+        en: "Ingles",
+        es: "Espanol",
+      },
+    },
     logOut: "Cerrar sesion",
     logOutA11y: "Cerrar sesion",
   },

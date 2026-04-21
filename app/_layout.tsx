@@ -7,10 +7,11 @@ import { ActivityIndicator, StyleSheet } from "react-native";
 import "react-native-reanimated";
 
 import { ThemedView } from "@/components/themed-view";
-import { t } from "@/config/i18n";
+import { setAppLanguage, t } from "@/config/i18n";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
+import { usePreferencesStore } from "@/stores/preferences-store";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -31,6 +32,17 @@ export default function RootLayout() {
   const clearOrganizationContext = useOrganizationStore((state) => state.clearOrganizationContext);
   const isOrganizationInitializing = useOrganizationStore((state) => state.isInitializing);
   const activeOrganization = useOrganizationStore((state) => state.activeOrganization);
+  const language = usePreferencesStore((state) => state.language);
+  const isPreferencesHydrated = usePreferencesStore((state) => state.isHydrated);
+  const hydratePreferences = usePreferencesStore((state) => state.hydratePreferences);
+
+  useEffect(() => {
+    void hydratePreferences();
+  }, [hydratePreferences]);
+
+  useEffect(() => {
+    setAppLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     const unsubscribe = initializeAuth();
@@ -49,7 +61,7 @@ export default function RootLayout() {
   }, [clearOrganizationContext, initializeOrganizationContext, user]);
 
   useEffect(() => {
-    if (isInitializing || (user && isOrganizationInitializing)) {
+    if (!isPreferencesHydrated || isInitializing || (user && isOrganizationInitializing)) {
       return;
     }
 
@@ -71,6 +83,7 @@ export default function RootLayout() {
   }, [
     activeOrganization,
     isInitializing,
+    isPreferencesHydrated,
     isOrganizationInitializing,
     router,
     secondSegment,
@@ -78,7 +91,7 @@ export default function RootLayout() {
     user,
   ]);
 
-  if (isInitializing || (user && isOrganizationInitializing)) {
+  if (!isPreferencesHydrated || isInitializing || (user && isOrganizationInitializing)) {
     return (
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <ThemedView style={styles.centered}>

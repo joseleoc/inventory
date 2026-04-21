@@ -13,7 +13,7 @@ const i18n = new I18n({
 
 i18n.enableFallback = true;
 i18n.defaultLocale = "es";
-i18n.locale = "es";
+i18n.locale = getDeviceLanguage();
 
 export function getDeviceLanguage(): AppLanguage {
   const code = Localization.getLocales()[0]?.languageCode?.toLowerCase();

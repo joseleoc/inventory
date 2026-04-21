@@ -2,6 +2,8 @@ import { Drawer } from "expo-router/drawer";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
+import { LanguageModeMolecule } from "@/components/settings/language-mode-molecule";
+import { ThemeModeMolecule } from "@/components/settings/theme-mode-molecule";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { t } from "@/config/i18n";
@@ -12,6 +14,7 @@ import { useAuthStore } from "@/stores/auth-store";
 export default function SettingsScreen() {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
+  const user = useAuthStore((state) => state.user);
   const signOutCurrentUser = useAuthStore((state) => state.signOutCurrentUser);
 
   const handleLogout = async () => {
@@ -37,6 +40,42 @@ export default function SettingsScreen() {
         <ThemedText style={[styles.subtitle, { color: colors.icon }]} selectable>
           {t("settings.subtitle")}
         </ThemedText>
+
+        <View style={[styles.userCard, { borderColor: colors.icon, backgroundColor: colors.background }]}>
+          <ThemedText type="defaultSemiBold" selectable>
+            {t("settings.userCard.title")}
+          </ThemedText>
+
+          <View style={styles.userRow}>
+            <ThemedText style={[styles.userLabel, { color: colors.icon }]} selectable>
+              {t("settings.userCard.name")}
+            </ThemedText>
+            <ThemedText style={styles.userValue} selectable>
+              {user?.displayName?.trim() || t("settings.userCard.notAvailable")}
+            </ThemedText>
+          </View>
+
+          <View style={styles.userRow}>
+            <ThemedText style={[styles.userLabel, { color: colors.icon }]} selectable>
+              {t("settings.userCard.email")}
+            </ThemedText>
+            <ThemedText style={styles.userValue} selectable>
+              {user?.email?.trim() || t("settings.userCard.notAvailable")}
+            </ThemedText>
+          </View>
+
+          <View style={styles.userRow}>
+            <ThemedText style={[styles.userLabel, { color: colors.icon }]} selectable>
+              {t("settings.userCard.uid")}
+            </ThemedText>
+            <ThemedText style={styles.userValue} selectable>
+              {user?.uid || t("settings.userCard.notAvailable")}
+            </ThemedText>
+          </View>
+        </View>
+
+        <ThemeModeMolecule />
+        <LanguageModeMolecule />
       </ScrollView>
 
       <View
@@ -82,6 +121,22 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     lineHeight: 24,
+  },
+  userCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+  },
+  userRow: {
+    gap: 2,
+  },
+  userLabel: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  userValue: {
+    lineHeight: 22,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
