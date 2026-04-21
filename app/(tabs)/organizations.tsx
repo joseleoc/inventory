@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -13,10 +13,10 @@ import { ThemedView } from "@/components/themed-view";
 import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import {
-    ORGANIZATION_ROLE_OPTIONS,
-    assignUserToOrganization,
-    createOrganization,
-    type OrganizationRole,
+  ORGANIZATION_ROLE_OPTIONS,
+  assignUserToOrganization,
+  createOrganization,
+  type OrganizationRole,
 } from "@/services/organizations";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
@@ -119,9 +119,23 @@ export default function OrganizationsScreen() {
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
   const accentColor = useMemo(() => "#0a7ea4", []);
-  const muted = useMemo(() => "#6D7782", []);
+  const dangerColor = useMemo(() => "#C5283D", []);
+  const successColor = useMemo(() => "#1E8E3E", []);
+  const muted = useMemo(() => (background === "#fff" ? "#3F4D5A" : "#C6D2DE"), [background]);
   const inputBackground = useMemo(
     () => (background === "#fff" ? "#F4F7FA" : "#1D2227"),
+    [background],
+  );
+  const sectionBackground = useMemo(
+    () => (background === "#fff" ? "#F8FBFD" : "#1A2128"),
+    [background],
+  );
+  const errorBackground = useMemo(
+    () => (background === "#fff" ? "#FDECEE" : "#2A1A1D"),
+    [background],
+  );
+  const successBackground = useMemo(
+    () => (background === "#fff" ? "#EAF8EE" : "#18271E"),
     [background],
   );
   const borderColor = useMemo(() => (background === "#fff" ? "#D8E0E8" : "#2C333A"), [background]);
@@ -259,24 +273,51 @@ export default function OrganizationsScreen() {
                 ? activeOrganization.name
                 : t("organizations.noActiveOrganization")}
             </ThemedText>
-            <ThemedText selectable style={{ color: muted }}>
-              {activeMembership
-                ? t("organizations.roleAndOrgId", {
-                    role: formatRoleLabel(activeMembership.role),
-                    orgId: activeMembership.orgId,
-                  })
+            <ThemedText selectable style={[styles.contextMetaText, { color: muted }]}>
+              {activeMembership && activeOrganization
+                ? `${t("common.labels.role")}: ${formatRoleLabel(activeMembership.role)}`
                 : t("organizations.noContextMessage")}
             </ThemedText>
           </View>
         </View>
 
         {organizationError ? (
-          <ThemedText style={styles.errorText}>{organizationError}</ThemedText>
+          <View
+            style={[
+              styles.banner,
+              styles.errorBanner,
+              { borderColor: dangerColor, backgroundColor: errorBackground },
+            ]}>
+            <ThemedText style={styles.errorText}>{organizationError}</ThemedText>
+          </View>
         ) : null}
-        {screenError ? <ThemedText style={styles.errorText}>{screenError}</ThemedText> : null}
-        {screenMessage ? <ThemedText style={styles.successText}>{screenMessage}</ThemedText> : null}
+        {screenError ? (
+          <View
+            style={[
+              styles.banner,
+              styles.errorBanner,
+              { borderColor: dangerColor, backgroundColor: errorBackground },
+            ]}>
+            <ThemedText style={styles.errorText}>{screenError}</ThemedText>
+          </View>
+        ) : null}
+        {screenMessage ? (
+          <View
+            style={[
+              styles.banner,
+              styles.successBanner,
+              { borderColor: successColor, backgroundColor: successBackground },
+            ]}>
+            <ThemedText style={styles.successText}>{screenMessage}</ThemedText>
+          </View>
+        ) : null}
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            styles.sectionCard,
+            { backgroundColor: sectionBackground, borderColor },
+          ]}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t("organizations.switchTitle")}
           </ThemedText>
@@ -292,18 +333,22 @@ export default function OrganizationsScreen() {
                   <Pressable
                     key={membership.id}
                     onPress={() => void switchOrganization(user, membership.orgId)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.membershipCard,
                       {
                         backgroundColor: selected ? chipBackground : inputBackground,
                         borderColor: selected ? accentColor : borderColor,
+                        opacity: pressed ? 0.84 : 1,
                       },
                     ]}>
                     <ThemedText type="defaultSemiBold" selectable>
                       {membership.orgName}
                     </ThemedText>
-                    <ThemedText selectable style={{ color: muted }}>
-                      {formatRoleLabel(membership.role)} · {membership.orgId}
+                    <ThemedText
+                      selectable
+                      numberOfLines={2}
+                      style={[styles.cardMetaText, { color: muted }]}>
+                      {formatRoleLabel(membership.role)}
                     </ThemedText>
                   </Pressable>
                 );
@@ -312,7 +357,12 @@ export default function OrganizationsScreen() {
           )}
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            styles.sectionCard,
+            { backgroundColor: sectionBackground, borderColor },
+          ]}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t("organizations.createTitle")}
           </ThemedText>
@@ -370,7 +420,12 @@ export default function OrganizationsScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.section}>
+        <View
+          style={[
+            styles.section,
+            styles.sectionCard,
+            { backgroundColor: sectionBackground, borderColor },
+          ]}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t("organizations.assignTitle")}
           </ThemedText>
@@ -389,17 +444,18 @@ export default function OrganizationsScreen() {
                     }));
                     setAssignmentErrors((current) => ({ ...current, organizationId: undefined }));
                   }}
-                  style={[
+                  style={({ pressed }) => [
                     styles.membershipCard,
                     {
                       backgroundColor: selected ? chipBackground : inputBackground,
                       borderColor: selected ? accentColor : borderColor,
+                      opacity: pressed ? 0.84 : 1,
                     },
                   ]}>
                   <ThemedText type="defaultSemiBold" selectable>
                     {membership.orgName}
                   </ThemedText>
-                  <ThemedText selectable style={{ color: muted }}>
+                  <ThemedText selectable style={[styles.cardMetaText, { color: muted }]}>
                     {formatRoleLabel(membership.role)}
                   </ThemedText>
                 </Pressable>
@@ -435,14 +491,16 @@ export default function OrganizationsScreen() {
                 <Pressable
                   key={role}
                   onPress={() => setAssignmentForm((current) => ({ ...current, role }))}
-                  style={[
+                  style={({ pressed }) => [
                     styles.roleChip,
                     {
                       backgroundColor: selected ? accentColor : inputBackground,
                       borderColor: selected ? accentColor : borderColor,
+                      opacity: pressed ? 0.84 : 1,
                     },
                   ]}>
-                  <ThemedText style={{ color: selected ? "#ffffff" : textColor }}>
+                  <ThemedText
+                    style={[styles.roleChipText, { color: selected ? "#ffffff" : textColor }]}>
                     {formatRoleLabel(role)}
                   </ThemedText>
                 </Pressable>
@@ -464,7 +522,7 @@ export default function OrganizationsScreen() {
             {isAssigning ? (
               <ActivityIndicator color={accentColor} />
             ) : (
-              <ThemedText style={{ color: accentColor, fontWeight: "700" }}>
+              <ThemedText style={[styles.secondaryButtonText, { color: accentColor }]}>
                 {t("organizations.buttons.assign")}
               </ThemedText>
             )}
@@ -498,21 +556,32 @@ const styles = StyleSheet.create({
     lineHeight: 36,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
   },
   contextBlock: {
     gap: 6,
   },
+  contextMetaText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
   section: {
     gap: 10,
   },
+  sectionCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+    gap: 12,
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 19,
+    lineHeight: 26,
   },
   fieldLabel: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 20,
   },
   input: {
     borderWidth: 1,
@@ -531,7 +600,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
-    gap: 4,
+    gap: 6,
+  },
+  cardMetaText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   emptyCard: {
     borderWidth: 1,
@@ -548,6 +621,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
+  },
+  roleChipText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
   },
   primaryButton: {
     borderRadius: 14,
@@ -567,13 +645,34 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#ffffff",
     fontWeight: "700",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  secondaryButtonText: {
+    fontWeight: "700",
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  banner: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorBanner: {
+    marginTop: -2,
+  },
+  successBanner: {
+    marginTop: -2,
   },
   errorText: {
-    color: "#C5283D",
-    fontSize: 13,
+    color: "#8C1D2B",
+    fontSize: 14,
+    lineHeight: 20,
   },
   successText: {
-    color: "#1E8E3E",
-    fontSize: 13,
+    color: "#166A2F",
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

@@ -1,3 +1,4 @@
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useFocusEffect } from "@react-navigation/native";
 import { BarCodeScanner } from "expo-barcode-scanner";
 import { useCallback, useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import {
 import { ProductSelector } from "@/components/product-selector";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useToast } from "@/hooks/use-toast";
@@ -68,10 +70,14 @@ export default function SalesScreen() {
 
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
-  const muted = useMemo(() => "#6D7782", []);
+  const muted = useMemo(() => (background === "#fff" ? "#3F4D5A" : "#C6D2DE"), [background]);
   const accentColor = useMemo(() => "#0a7ea4", []);
   const dangerColor = useMemo(() => "#C5283D", []);
   const successColor = useMemo(() => "#1E8E3E", []);
+  const accentSoftBackground = useMemo(
+    () => (background === "#fff" ? "#E8F3F8" : "#13252E"),
+    [background],
+  );
   const inputBackground = useMemo(
     () => (background === "#fff" ? "#F4F7FA" : "#1D2227"),
     [background],
@@ -281,9 +287,124 @@ export default function SalesScreen() {
           </ThemedText>
         ) : null}
 
-        <View style={styles.section}>
+        <View style={[styles.section, { marginTop: 10 }]}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            {t("sales.cartsTitle")}
+          </ThemedText>
+
+          <View style={styles.cartActionsRow}>
+            <Pressable
+              onPress={() => {
+                const cartNumber = carts.length + archivedCarts.length + 1;
+                createCart(t("newCartFab.clientName", { number: cartNumber }));
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("sales.newCart")}
+              style={({ pressed }) => [
+                styles.newCartButton,
+                {
+                  borderColor,
+                  backgroundColor: accentSoftBackground,
+                  opacity: pressed ? 0.82 : 1,
+                },
+              ]}>
+              <IconSymbol name="plus.circle.fill" size={16} color={accentColor} />
+              <ThemedText type="defaultSemiBold">{t("sales.newCart")}</ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={clearActiveCart}
+              disabled={!activeCart || activeCart.lines.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel={t("sales.clearCart")}
+              style={({ pressed }) => [
+                styles.newCartButton,
+                {
+                  borderColor,
+                  backgroundColor: inputBackground,
+                  opacity: pressed || !activeCart || activeCart.lines.length === 0 ? 0.65 : 1,
+                },
+              ]}>
+              <MaterialIcons name="cleaning-services" size={16} color={muted} />
+              <ThemedText type="defaultSemiBold">{t("sales.clearCart")}</ThemedText>
+            </Pressable>
+          </View>
+
+          <View style={styles.cartGrid}>
+            {carts.map((cart) => {
+              const selected = cart.id === activeCartId;
+
+              return (
+                <View key={cart.id} style={styles.cartTileCard}>
+                  <Pressable
+                    onPress={() => switchActiveCart(cart.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={cart.clientLabel}
+                    style={[
+                      styles.cartTileButton,
+                      {
+                        borderColor: selected ? accentColor : borderColor,
+                        backgroundColor: selected ? accentSoftBackground : inputBackground,
+                      },
+                    ]}>
+                    <View
+                      style={[
+                        styles.cartTileIconWrap,
+                        { backgroundColor: selected ? accentColor : borderColor },
+                      ]}>
+                      <IconSymbol
+                        name="cart.fill"
+                        size={16}
+                        color={selected ? "#ffffff" : textColor}
+                      />
+                    </View>
+
+                    <ThemedText
+                      style={[styles.cartTileCount, { color: selected ? accentColor : muted }]}
+                      selectable>
+                      {cart.lines.length}
+                    </ThemedText>
+                  </Pressable>
+
+                  <View style={styles.cartTileFooter}>
+                    <ThemedText
+                      numberOfLines={1}
+                      selectable
+                      style={[styles.cartTileLabel, { color: textColor }]}>
+                      {cart.clientLabel}
+                    </ThemedText>
+
+                    <Pressable
+                      onPress={() => deleteCart(cart.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("sales.deleteCartA11y", { label: cart.clientLabel })}
+                      style={({ pressed }) => [
+                        styles.deleteCartIconButton,
+                        {
+                          borderColor,
+                          backgroundColor: inputBackground,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}>
+                      <MaterialIcons name="delete-outline" size={14} color={dangerColor} />
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.section,
+            styles.selectorSpotlight,
+            { backgroundColor: accentSoftBackground, borderColor: accentColor },
+          ]}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t("sales.lookupTitle")}
+          </ThemedText>
+          <ThemedText style={[styles.selectorSubtitle, { color: muted }]}>
+            {t("productSelector.defaultLabel")}
           </ThemedText>
 
           <ProductSelector
@@ -301,12 +422,17 @@ export default function SalesScreen() {
                 style={({ pressed }) => [
                   styles.scanButton,
                   {
-                    borderColor,
-                    backgroundColor: inputBackground,
+                    borderColor: accentColor,
+                    backgroundColor: accentColor,
                     opacity: pressed || !activeOrganization ? 0.82 : 1,
                   },
                 ]}>
-                <ThemedText type="defaultSemiBold">{t("sales.scanButton")}</ThemedText>
+                <View style={styles.scanButtonContent}>
+                  <MaterialIcons name="qr-code-scanner" size={18} color="#ffffff" />
+                  <ThemedText type="defaultSemiBold" style={styles.buttonText}>
+                    {t("sales.scanButton")}
+                  </ThemedText>
+                </View>
               </Pressable>
             }
           />
@@ -330,80 +456,6 @@ export default function SalesScreen() {
         </View>
 
         <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            {t("sales.cartsTitle")}
-          </ThemedText>
-
-          <View style={styles.row}>
-            <Pressable
-              onPress={() => {
-                const cartNumber = carts.length + archivedCarts.length + 1;
-                createCart(t("newCartFab.clientName", { number: cartNumber }));
-              }}
-              style={({ pressed }) => [
-                styles.newCartButton,
-                {
-                  borderColor,
-                  backgroundColor: inputBackground,
-                  opacity: pressed ? 0.82 : 1,
-                },
-              ]}>
-              <ThemedText type="defaultSemiBold">{t("sales.newCart")}</ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={clearActiveCart}
-              disabled={!activeCart || activeCart.lines.length === 0}
-              style={({ pressed }) => [
-                styles.newCartButton,
-                {
-                  borderColor,
-                  backgroundColor: inputBackground,
-                  opacity: pressed || !activeCart || activeCart.lines.length === 0 ? 0.65 : 1,
-                },
-              ]}>
-              <ThemedText type="defaultSemiBold">{t("sales.clearCart")}</ThemedText>
-            </Pressable>
-          </View>
-
-          <View style={styles.cartTabs}>
-            {carts.map((cart) => {
-              const selected = cart.id === activeCartId;
-              return (
-                <View key={cart.id} style={styles.cartChipRow}>
-                  <Pressable
-                    onPress={() => switchActiveCart(cart.id)}
-                    style={[
-                      styles.cartChip,
-                      {
-                        borderColor: selected ? accentColor : borderColor,
-                        backgroundColor: selected ? accentColor : inputBackground,
-                      },
-                    ]}>
-                    <ThemedText style={{ color: selected ? "#ffffff" : textColor }} selectable>
-                      {cart.clientLabel} ({cart.lines.length})
-                    </ThemedText>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => deleteCart(cart.id)}
-                    accessibilityLabel={t("sales.deleteCartA11y", { label: cart.clientLabel })}
-                    style={({ pressed }) => [
-                      styles.deleteCartButton,
-                      {
-                        borderColor,
-                        backgroundColor: inputBackground,
-                        opacity: pressed ? 0.82 : 1,
-                      },
-                    ]}>
-                    <ThemedText type="defaultSemiBold" style={{ color: dangerColor }}>
-                      {t("sales.deleteCart")}
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              );
-            })}
-          </View>
-
           {activeCart ? (
             <>
               <FieldLabel label={t("sales.activeCartLabel")} />
@@ -600,8 +652,8 @@ const styles = StyleSheet.create({
     lineHeight: 36,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
   },
   noticeCard: {
     borderWidth: 1,
@@ -610,7 +662,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   feedbackText: {
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
   },
   section: {
     gap: 10,
@@ -619,13 +672,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   fieldLabel: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 20,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  cartActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
   },
   input: {
     borderWidth: 1,
@@ -640,10 +699,16 @@ const styles = StyleSheet.create({
   scanButton: {
     borderWidth: 1,
     borderRadius: 12,
+    minHeight: 48,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
+  },
+  scanButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   scannerWrap: {
     borderWidth: 1,
@@ -690,28 +755,70 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
-  },
-  cartTabs: {
-    gap: 10,
-  },
-  cartChipRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  cartChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignSelf: "flex-start",
-    flex: 1,
+  cartGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 10,
+    rowGap: 14,
   },
-  deleteCartButton: {
+  cartTileCard: {
+    minWidth: 88,
+    gap: 6,
+  },
+  cartTileButton: {
     borderWidth: 1,
+    borderRadius: 14,
+    aspectRatio: 0.92,
+    paddingHorizontal: 8,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  cartTileIconWrap: {
+    width: 30,
+    height: 30,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartTileCount: {
+    fontSize: 19,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  cartTileFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  cartTileLabel: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  deleteCartIconButton: {
+    borderWidth: 1,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectorSpotlight: {
+    borderWidth: 2,
+    borderRadius: 18,
+    padding: 14,
+    gap: 8,
+  },
+  selectorSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   linesWrap: {
     gap: 10,

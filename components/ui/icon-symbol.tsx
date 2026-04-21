@@ -17,6 +17,7 @@ const MAPPING = {
   "house.fill": "home",
   "paperplane.fill": "send",
   "plus.circle.fill": "add-circle",
+  "shippingbox.fill": "inventory-2",
   "cart.fill": "shopping-cart",
   "building.2.fill": "business",
   "rectangle.portrait.and.arrow.right": "logout",

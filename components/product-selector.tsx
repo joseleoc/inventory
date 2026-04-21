@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { t } from "@/config/i18n";
@@ -36,6 +43,8 @@ export function ProductSelector({
   actionDisabled = false,
   inputAccessory,
 }: ProductSelectorProps) {
+  const { width } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const [results, setResults] = useState<ProductLookupItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -44,7 +53,7 @@ export function ProductSelector({
 
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
-  const muted = useMemo(() => "#6D7782", []);
+  const muted = useMemo(() => (background === "#fff" ? "#3F4D5A" : "#C6D2DE"), [background]);
   const accentColor = useMemo(() => "#0a7ea4", []);
   const inputBackground = useMemo(
     () => (background === "#fff" ? "#F4F7FA" : "#1D2227"),
@@ -55,6 +64,8 @@ export function ProductSelector({
   const normalizedQuery = query.trim();
   const normalizedOrgId = organizationId?.trim() ?? "";
   const hasQuery = normalizedQuery.length > 0;
+  const effectiveWidth = containerWidth ?? width;
+  const isCompact = effectiveWidth <= 430;
 
   const debouncedSearch = useMemo(
     () =>
@@ -113,12 +124,19 @@ export function ProductSelector({
   ]);
 
   return (
-    <View style={styles.section}>
+    <View
+      style={styles.section}
+      onLayout={(event) => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        setContainerWidth((currentWidth) =>
+          currentWidth === nextWidth ? currentWidth : nextWidth,
+        );
+      }}>
       <ThemedText type="defaultSemiBold" style={styles.fieldLabel}>
         {label}
       </ThemedText>
 
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, isCompact && styles.inputRowCompact]}>
         <TextInput
           value={query}
           onChangeText={onQueryChange}
@@ -130,11 +148,16 @@ export function ProductSelector({
           style={[
             styles.input,
             styles.searchInput,
+            isCompact && styles.searchInputCompact,
             { color: textColor, backgroundColor: inputBackground, borderColor },
           ]}
         />
 
-        {inputAccessory}
+        {inputAccessory ? (
+          <View style={[styles.inputAccessoryWrap, isCompact && styles.inputAccessoryWrapCompact]}>
+            {inputAccessory}
+          </View>
+        ) : null}
       </View>
 
       {searchError ? <ThemedText style={styles.errorText}>{searchError}</ThemedText> : null}
@@ -145,12 +168,19 @@ export function ProductSelector({
           {results.map((product) => (
             <View
               key={product.id}
-              style={[styles.resultCard, { backgroundColor: inputBackground, borderColor }]}>
-              <View style={styles.resultMeta}>
-                <ThemedText type="defaultSemiBold" selectable>
+              style={[
+                styles.resultCard,
+                isCompact && styles.resultCardCompact,
+                { backgroundColor: inputBackground, borderColor },
+              ]}>
+              <View style={[styles.resultMeta, isCompact && styles.resultMetaCompact]}>
+                <ThemedText type="defaultSemiBold" selectable numberOfLines={2}>
                   {product.name}
                 </ThemedText>
-                <ThemedText selectable style={{ color: muted }}>
+                <ThemedText
+                  selectable
+                  style={[styles.resultAuxText, { color: muted }]}
+                  numberOfLines={2}>
                   {t("productSelector.lineSkuBarcode", {
                     sku: product.sku,
                     barcode: product.barcode
@@ -158,7 +188,10 @@ export function ProductSelector({
                       : "",
                   })}
                 </ThemedText>
-                <ThemedText selectable style={{ color: muted }}>
+                <ThemedText
+                  selectable
+                  style={[styles.resultAuxText, { color: muted }]}
+                  numberOfLines={2}>
                   {t("productSelector.lineStockPrice", {
                     stock: product.currentStock,
                     price: product.unitPrice.toFixed(2),
@@ -171,6 +204,7 @@ export function ProductSelector({
                 disabled={actionDisabled}
                 style={({ pressed }) => [
                   styles.actionButton,
+                  isCompact && styles.actionButtonCompact,
                   {
                     backgroundColor: accentColor,
                     opacity: pressed || actionDisabled ? 0.82 : 1,
@@ -197,13 +231,25 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   fieldLabel: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 20,
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  inputRowCompact: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 8,
+  },
+  inputAccessoryWrap: {
+    flexShrink: 0,
+  },
+  inputAccessoryWrapCompact: {
+    width: "100%",
+    alignItems: "stretch",
   },
   input: {
     borderWidth: 1,
@@ -214,6 +260,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
+  },
+  searchInputCompact: {
+    width: "100%",
   },
   lookupResults: {
     gap: 10,
@@ -227,9 +277,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  resultCardCompact: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 12,
+  },
   resultMeta: {
     flex: 1,
-    gap: 3,
+    gap: 4,
+    minWidth: 0,
+  },
+  resultAuxText: {
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  resultMetaCompact: {
+    width: "100%",
   },
   actionButton: {
     borderRadius: 10,
@@ -237,6 +300,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     minWidth: 72,
     alignItems: "center",
+  },
+  actionButtonCompact: {
+    width: "100%",
+    minHeight: 44,
+    justifyContent: "center",
   },
   actionButtonText: {
     color: "#ffffff",
@@ -250,6 +318,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#C5283D",
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
