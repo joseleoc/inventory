@@ -20,6 +20,7 @@ const MAPPING = {
   "shippingbox.fill": "inventory-2",
   "cart.fill": "shopping-cart",
   "building.2.fill": "business",
+  "gearshape.fill": "settings",
   "rectangle.portrait.and.arrow.right": "logout",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",

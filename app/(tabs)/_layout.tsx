@@ -13,19 +13,13 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { t } from "@/config/i18n";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuthStore } from "@/stores/auth-store";
 
 function CustomDrawerContent(props: DrawerContentComponentProps) {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
-  const signOutCurrentUser = useAuthStore((state) => state.signOutCurrentUser);
 
-  const handleLogout = async () => {
-    try {
-      await signOutCurrentUser();
-    } catch {
-      // Root auth handling manages redirect and error state.
-    }
+  const handleOpenSettings = () => {
+    props.navigation.navigate("settings");
   };
 
   return (
@@ -40,19 +34,19 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       <View style={[styles.footer, { borderTopColor: colors.icon }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={t("drawer.logOutA11y")}
-          onPress={handleLogout}
+          accessibilityLabel={t("drawer.settingsA11y")}
+          onPress={handleOpenSettings}
           style={({ pressed }) => [
-            styles.logoutButton,
+            styles.settingsButton,
             {
               borderColor: colors.icon,
               backgroundColor: colors.background,
               opacity: pressed ? 0.82 : 1,
             },
           ]}>
-          <IconSymbol size={20} name="rectangle.portrait.and.arrow.right" color={colors.text} />
-          <ThemedText type="defaultSemiBold" style={styles.logoutLabel} selectable>
-            {t("drawer.logOut")}
+          <IconSymbol size={20} name="gearshape.fill" color={colors.text} />
+          <ThemedText type="defaultSemiBold" style={styles.settingsLabel} selectable>
+            {t("drawer.settings")}
           </ThemedText>
         </Pressable>
       </View>
@@ -120,6 +114,13 @@ export default function TabLayout() {
             ),
           }}
         />
+        <Drawer.Screen
+          name="settings"
+          options={{
+            title: t("drawer.settings"),
+            drawerItemStyle: { display: "none" },
+          }}
+        />
       </Drawer>
 
       <NewCartFab />
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingTop: 10,
   },
-  logoutButton: {
+  settingsButton: {
     borderWidth: 1,
     borderRadius: 12,
     flexDirection: "row",
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  logoutLabel: {
+  settingsLabel: {
     lineHeight: 22,
   },
 });
