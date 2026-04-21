@@ -11,7 +11,7 @@
     "lint": "expo lint",
     "deploy": "gh-pages --nojekyll -d dist",
     "predeploy": "expo export -p web",
-    "buil:web": "expo export -p web"
+    "build:web": "expo export -p web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
