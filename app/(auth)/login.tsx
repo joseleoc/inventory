@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { z } from "zod";
 
+import { AuthQuickPreferences } from "@/components/auth/auth-quick-preferences";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { t } from "@/config/i18n";
@@ -94,6 +95,7 @@ export default function LoginScreen() {
               styles.card,
               { backgroundColor: palette.cardBackground, borderColor: palette.cardBorder },
             ]}>
+            <AuthQuickPreferences disabled={isSubmitting} />
             <ThemedText type="title" style={styles.title} selectable>
               {t("auth.login.title")}
             </ThemedText>
