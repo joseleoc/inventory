@@ -19,6 +19,7 @@ import {
 import { firebaseDb } from "@/config/firebase";
 
 export type ProductMeasurementUnit = "unit" | "mass" | "volume";
+export type ProductItemType = "stock" | "compound" | "service";
 
 export type ProductCreateInput = {
   sku: string;
@@ -26,6 +27,7 @@ export type ProductCreateInput = {
   name: string;
   description?: string;
   category?: string;
+  itemType?: ProductItemType;
   currentStock: number;
   stockThreshold: number;
   salePrice: number;
@@ -41,6 +43,7 @@ export type ProductCreatePayload = {
   name: string;
   description?: string;
   category?: string;
+  item_type: ProductItemType;
   current_stock: number;
   stock_threshold: number;
   sale_price: number;
@@ -65,6 +68,7 @@ type ProductDocument = {
   name: string;
   description?: string | null;
   category?: string | null;
+  item_type?: ProductItemType;
   current_stock: number;
   stock_threshold: number;
   sale_price?: number;
@@ -110,6 +114,7 @@ export type ProductUpdateInput = {
   name?: string;
   description?: string;
   category?: string;
+  itemType?: ProductItemType;
   stockThreshold?: number;
   salePrice?: number;
   purchaseUnitCost?: number;
@@ -135,6 +140,7 @@ export type ProductRecord = {
   name: string;
   description?: string;
   category?: string;
+  itemType: ProductItemType;
   currentStock: number;
   stockThreshold: number;
   salePrice: number;
@@ -161,6 +167,7 @@ export type ListActiveProductsPageResult = {
 };
 
 const MEASUREMENT_UNITS: ProductMeasurementUnit[] = ["unit", "mass", "volume"];
+const ITEM_TYPES: ProductItemType[] = ["stock", "compound", "service"];
 const DEFAULT_PRODUCTS_PAGE_SIZE = 20;
 const PRODUCTS_FETCH_MULTIPLIER = 3;
 
@@ -171,6 +178,10 @@ function normalizeOptionalText(value?: string) {
 
 function resolveMeasurementUnit(value?: ProductMeasurementUnit): ProductMeasurementUnit {
   return value && MEASUREMENT_UNITS.includes(value) ? value : "unit";
+}
+
+function resolveItemType(value?: ProductItemType): ProductItemType {
+  return value && ITEM_TYPES.includes(value) ? value : "stock";
 }
 
 function resolveSalePrice(document: ProductDocument) {
@@ -213,6 +224,7 @@ function mapProductRecord(productId: string, document: ProductDocument): Product
     name: document.name,
     description,
     category,
+    itemType: resolveItemType(document.item_type),
     currentStock: document.current_stock,
     stockThreshold: document.stock_threshold,
     salePrice: resolveSalePrice(document),
@@ -291,6 +303,7 @@ function toPayload(input: ProductCreateInput, user: User, orgId: string): Produc
     name: input.name.trim(),
     ...(description ? { description } : {}),
     ...(category ? { category } : {}),
+    item_type: resolveItemType(input.itemType),
     current_stock: input.currentStock,
     stock_threshold: input.stockThreshold,
     sale_price: input.salePrice,
@@ -431,6 +444,10 @@ export async function updateProduct(input: ProductUpdateInput, user: User, orgId
 
       if (input.category !== undefined) {
         updatePayload.category = normalizeOptionalText(input.category) ?? null;
+      }
+
+      if (input.itemType !== undefined) {
+        updatePayload.item_type = resolveItemType(input.itemType);
       }
 
       if (input.stockThreshold !== undefined) {

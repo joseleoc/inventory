@@ -1,6 +1,10 @@
 import "@/config/firebase";
+import { FontAwesome } from "@expo/vector-icons";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
@@ -8,6 +12,7 @@ import "react-native-reanimated";
 
 import { ThemedView } from "@/components/themed-view";
 import { setAppLanguage, t } from "@/config/i18n";
+import { queryClient } from "@/config/query-client";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
@@ -17,7 +22,13 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
+// Keep the splash screen visible while shared assets are still loading.
+void SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    ...FontAwesome.font,
+  });
   const colorScheme = useColorScheme();
   const router = useRouter();
   const segments = useSegments();
@@ -35,6 +46,27 @@ export default function RootLayout() {
   const language = usePreferencesStore((state) => state.language);
   const isPreferencesHydrated = usePreferencesStore((state) => state.isHydrated);
   const hydratePreferences = usePreferencesStore((state) => state.hydratePreferences);
+  const isAppBootstrapping =
+    !fontsLoaded ||
+    !isPreferencesHydrated ||
+    isInitializing ||
+    (user && isOrganizationInitializing);
+
+  useEffect(() => {
+    if (!fontError) {
+      return;
+    }
+
+    throw fontError;
+  }, [fontError]);
+
+  useEffect(() => {
+    if (!fontsLoaded) {
+      return;
+    }
+
+    void SplashScreen.hideAsync();
+  }, [fontsLoaded]);
 
   useEffect(() => {
     void hydratePreferences();
@@ -61,7 +93,7 @@ export default function RootLayout() {
   }, [clearOrganizationContext, initializeOrganizationContext, user]);
 
   useEffect(() => {
-    if (!isPreferencesHydrated || isInitializing || (user && isOrganizationInitializing)) {
+    if (isAppBootstrapping) {
       return;
     }
 
@@ -82,6 +114,7 @@ export default function RootLayout() {
     }
   }, [
     activeOrganization,
+    isAppBootstrapping,
     isInitializing,
     isPreferencesHydrated,
     isOrganizationInitializing,
@@ -91,26 +124,30 @@ export default function RootLayout() {
     user,
   ]);
 
-  if (!isPreferencesHydrated || isInitializing || (user && isOrganizationInitializing)) {
+  if (isAppBootstrapping) {
     return (
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <ThemedView style={styles.centered}>
-          <ActivityIndicator size="large" />
-        </ThemedView>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <ThemedView style={styles.centered}>
+            <ActivityIndicator size="large" />
+          </ThemedView>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </QueryClientProvider>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack key={language}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal", title: t("modal.title") }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <Stack key={language}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: "modal", title: t("modal.title") }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

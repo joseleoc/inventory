@@ -16,10 +16,10 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { t } from "@/config/i18n";
+import { useCheckoutCartMutation } from "@/hooks/use-sales-checkout";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useToast } from "@/hooks/use-toast";
 import {
-  checkoutCart,
   clearSalesProductCache,
   findProductByCode,
   type ProductLookupItem,
@@ -57,7 +57,6 @@ export default function SalesScreen() {
   const archiveActiveCart = useSalesCartStore((state) => state.archiveActiveCart);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [screenError, setScreenError] = useState<string | null>(null);
   const [screenMessage, setScreenMessage] = useState<string | null>(null);
   const [isScannerVisible, setIsScannerVisible] = useState(false);
@@ -67,6 +66,7 @@ export default function SalesScreen() {
   const [scanLocked, setScanLocked] = useState(false);
   const [searchRefreshToken, setSearchRefreshToken] = useState(0);
   const { showToast, toastElement } = useToast({ position: "top" });
+  const checkoutMutation = useCheckoutCartMutation();
 
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -199,17 +199,16 @@ export default function SalesScreen() {
       !activeOrganization ||
       !activeCart ||
       activeCart.lines.length === 0 ||
-      isCheckingOut
+      checkoutMutation.isPending
     ) {
       return;
     }
 
-    setIsCheckingOut(true);
     setScreenError(null);
     setScreenMessage(null);
 
     try {
-      const result = await checkoutCart({
+      const result = await checkoutMutation.mutateAsync({
         orgId: activeOrganization.id,
         soldBy: user.uid,
         cartId: activeCart.id,
@@ -238,8 +237,6 @@ export default function SalesScreen() {
         error instanceof Error ? error.message : t("sales.messages.checkoutError"),
         "error",
       );
-    } finally {
-      setIsCheckingOut(false);
     }
   };
 
@@ -598,7 +595,10 @@ export default function SalesScreen() {
             <Pressable
               onPress={() => void handleCheckout()}
               disabled={
-                !activeOrganization || !activeCart || activeCart.lines.length === 0 || isCheckingOut
+                !activeOrganization ||
+                !activeCart ||
+                activeCart.lines.length === 0 ||
+                checkoutMutation.isPending
               }
               style={({ pressed }) => [
                 styles.checkoutButton,
@@ -609,12 +609,12 @@ export default function SalesScreen() {
                     !activeOrganization ||
                     !activeCart ||
                     activeCart.lines.length === 0 ||
-                    isCheckingOut
+                    checkoutMutation.isPending
                       ? 0.72
                       : 1,
                 },
               ]}>
-              {isCheckingOut ? (
+              {checkoutMutation.isPending ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <ThemedText style={styles.buttonText}>{t("sales.checkout")}</ThemedText>

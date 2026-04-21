@@ -19,6 +19,8 @@ type ProductSelectorProps = {
   query: string;
   onQueryChange: (value: string) => void;
   onSelectProduct: (product: ProductLookupItem) => void;
+  filterResult?: (product: ProductLookupItem) => boolean;
+  excludedProductIds?: string[];
   refreshToken?: number;
   label?: string;
   placeholder?: string;
@@ -34,6 +36,8 @@ export function ProductSelector({
   query,
   onQueryChange,
   onSelectProduct,
+  filterResult,
+  excludedProductIds,
   refreshToken = 0,
   label = t("productSelector.defaultLabel"),
   placeholder = t("productSelector.defaultPlaceholder"),
@@ -63,6 +67,7 @@ export function ProductSelector({
 
   const normalizedQuery = query.trim();
   const normalizedOrgId = organizationId?.trim() ?? "";
+  const excludedIdsSet = useMemo(() => new Set(excludedProductIds ?? []), [excludedProductIds]);
   const hasQuery = normalizedQuery.length > 0;
   const effectiveWidth = containerWidth ?? width;
   const isCompact = effectiveWidth <= 430;
@@ -123,6 +128,12 @@ export function ProductSelector({
     refreshToken,
   ]);
 
+  const visibleResults = useMemo(() => {
+    return results
+      .filter((product) => !excludedIdsSet.has(product.id))
+      .filter((product) => (filterResult ? filterResult(product) : true));
+  }, [results, excludedIdsSet, filterResult]);
+
   return (
     <View
       style={styles.section}
@@ -165,7 +176,7 @@ export function ProductSelector({
 
       {(!hideResultsWhenEmptyQuery || hasQuery) && !searchError ? (
         <View style={styles.lookupResults}>
-          {results.map((product) => (
+          {visibleResults.map((product) => (
             <View
               key={product.id}
               style={[
@@ -215,7 +226,7 @@ export function ProductSelector({
             </View>
           ))}
 
-          {!isSearching && results.length === 0 ? (
+          {!isSearching && visibleResults.length === 0 ? (
             <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
               <ThemedText selectable>{emptyMessage}</ThemedText>
             </View>

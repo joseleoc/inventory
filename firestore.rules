@@ -72,6 +72,14 @@ service cloud.firestore {
              && request.resource.data.updated_by == request.auth.uid;
     }
 
+    function validMovementType(value) {
+      return value in ['sale_parent', 'compound_consumption', 'service_sale'];
+    }
+
+    function validParentItemType(value) {
+      return value in ['stock', 'compound', 'service'];
+    }
+
     // ORGANIZATIONS
     // Create is restricted to authenticated admins only.
     match /organizations/{organizationId} {
@@ -124,6 +132,26 @@ service cloud.firestore {
       allow create: if sameOrgFromRequest()
                     && isCashier()
                     && request.resource.data.sold_by == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // COMPOUND_PRODUCT_RECIPES
+    match /compound_product_recipes/{recipeId} {
+      allow read: if sameOrgFromResource() && isViewer();
+      allow create, update: if sameOrgFromRequest()
+                            && isManager()
+                            && request.resource.data.updated_by == request.auth.uid;
+      allow delete: if sameOrgFromResource() && isAdmin();
+    }
+
+    // SALE_INVENTORY_MOVEMENTS (append-only)
+    match /sale_inventory_movements/{movementId} {
+      allow read: if sameOrgFromResource() && isCashier();
+      allow create: if sameOrgFromRequest()
+                    && isCashier()
+                    && request.resource.data.moved_by == request.auth.uid
+                    && validMovementType(request.resource.data.movement_type)
+                    && validParentItemType(request.resource.data.parent_item_type);
       allow update, delete: if false;
     }
 
