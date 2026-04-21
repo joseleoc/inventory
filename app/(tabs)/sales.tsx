@@ -225,18 +225,20 @@ export default function SalesScreen() {
 
       archiveActiveCart({ saleId: result.saleId });
       clearSalesProductCache();
+
+      const compactSaleId = result.saleId.replace(/^sale_/, "").slice(-8);
       showToast(
-        t("sales.messages.checkoutComplete", {
+        t("sales.messages.checkoutCompleteDetailed", {
+          cart: activeCart.clientLabel,
           items: result.totalItems,
           total: result.totalAmount.toFixed(2),
+          saleId: compactSaleId,
         }),
         "success",
       );
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : t("sales.messages.checkoutError"),
-        "error",
-      );
+      const reason = error instanceof Error ? error.message : t("sales.messages.checkoutError");
+      showToast(t("sales.messages.checkoutErrorDetailed", { reason }), "error");
     }
   };
 

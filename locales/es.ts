@@ -388,7 +388,10 @@ const es = {
       scannedAdded: "%{name} agregado desde escaner.",
       scanProcessError: "No se pudo procesar el escaneo.",
       checkoutComplete: "Checkout completado (%{items} items, $%{total}).",
+      checkoutCompleteDetailed:
+        "Checkout completado para %{cart} (%{items} items, $%{total}). Venta: %{saleId}.",
       checkoutError: "No se pudo completar el checkout del carrito.",
+      checkoutErrorDetailed: "No se pudo completar el checkout: %{reason}",
     },
   },
   organizations: {

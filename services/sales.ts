@@ -340,9 +340,7 @@ export async function checkoutCart(input: CheckoutInput) {
             !Number.isInteger(ingredient.quantity_per_output) ||
             ingredient.quantity_per_output <= 0
           ) {
-            throw new Error(
-              `Compound recipe for ${line.name} has invalid ingredient quantities.`,
-            );
+            throw new Error(`Compound recipe for ${line.name} has invalid ingredient quantities.`);
           }
 
           ingredientProductIds.add(ingredient.product_id);
@@ -404,10 +402,7 @@ export async function checkoutCart(input: CheckoutInput) {
             throw new Error(`Compound ingredient ${ingredientProduct.name} must be a stock item.`);
           }
 
-          addStockDeduction(
-            ingredient.product_id,
-            line.quantity * ingredient.quantity_per_output,
-          );
+          addStockDeduction(ingredient.product_id, line.quantity * ingredient.quantity_per_output);
         }
       }
 
@@ -530,11 +525,7 @@ export async function checkoutCart(input: CheckoutInput) {
 
           runningStockByProductId.set(ingredient.product_id, ingredientStockAfter);
 
-          const ingredientMovementRef = doc(
-            firebaseDb,
-            "sale_inventory_movements",
-            makeId("move"),
-          );
+          const ingredientMovementRef = doc(firebaseDb, "sale_inventory_movements", makeId("move"));
 
           transaction.set(ingredientMovementRef, {
             org_id: orgId,
