@@ -181,6 +181,12 @@ const en = {
     },
     requiredDetails: "Required Details",
     optionalDetails: "Optional Details",
+    scanner: {
+      open: "Scan barcode",
+      close: "Close scanner",
+      nativeOnly: "Camera scanner is only available on native mobile.",
+      permissionDenied: "Camera permission denied. Enter the barcode manually.",
+    },
     compound: {
       requiredDetails: "Compound Details",
       ingredientsTitle: "Ingredients",

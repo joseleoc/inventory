@@ -183,6 +183,12 @@ const es = {
     },
     requiredDetails: "Datos obligatorios",
     optionalDetails: "Datos opcionales",
+    scanner: {
+      open: "Escanear codigo",
+      close: "Cerrar escaner",
+      nativeOnly: "El escaner de camara solo esta disponible en movil nativo.",
+      permissionDenied: "Permiso de camara denegado. Ingresa el codigo manualmente.",
+    },
     compound: {
       requiredDetails: "Datos del compuesto",
       ingredientsTitle: "Ingredientes",

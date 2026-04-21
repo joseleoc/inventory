@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useFocusEffect } from "@react-navigation/native";
-import { BarCodeScanner } from "expo-barcode-scanner";
+import { Camera, CameraView } from "expo-camera";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -141,7 +141,7 @@ export default function SalesScreen() {
     }
 
     if (cameraPermission !== "granted") {
-      const permission = await BarCodeScanner.requestPermissionsAsync();
+      const permission = await Camera.requestCameraPermissionsAsync();
       const granted = permission.status === "granted";
       setCameraPermission(granted ? "granted" : "denied");
 
@@ -438,9 +438,10 @@ export default function SalesScreen() {
 
           {isScannerVisible ? (
             <View style={[styles.scannerWrap, { borderColor }]}>
-              <BarCodeScanner
-                onBarCodeScanned={(result) => void handleScannedCode(result.data)}
+              <CameraView
+                onBarcodeScanned={(result: { data: string }) => void handleScannedCode(result.data)}
                 style={styles.scanner}
+                facing="back"
               />
               <Pressable
                 onPress={() => setIsScannerVisible(false)}

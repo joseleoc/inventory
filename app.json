@@ -40,7 +40,7 @@
         }
       ],
       "expo-sqlite",
-      "expo-barcode-scanner",
+      "expo-camera",
       "expo-secure-store",
       "expo-localization",
       "expo-font"
