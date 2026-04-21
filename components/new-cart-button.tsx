@@ -34,9 +34,7 @@ export function NewCartHeaderButton() {
         { backgroundColor: buttonColor, opacity: pressed ? 0.82 : 1 },
       ]}>
       <IconSymbol size={16} name="cart.fill" color={contentColor} />
-      <ThemedText style={[styles.label, { color: contentColor }]}>
-        {t("newCartFab.label")}
-      </ThemedText>
+      <ThemedText style={[styles.label, { color: contentColor }]}>{t("newCartFab.label")}</ThemedText>
     </Pressable>
   );
 }

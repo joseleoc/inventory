@@ -4,10 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import {
-  usePreferencesStore,
-  type ThemePreference,
-} from "@/stores/preferences-store";
+import { usePreferencesStore, type ThemePreference } from "@/stores/preferences-store";
 
 const THEME_OPTIONS: ThemePreference[] = ["system", "light", "dark"];
 

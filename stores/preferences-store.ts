@@ -1,11 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-import {
-  getDeviceLanguage,
-  setAppLanguage,
-  type AppLanguage,
-} from "@/config/i18n";
+import { getDeviceLanguage, setAppLanguage, type AppLanguage } from "@/config/i18n";
 
 export type ThemePreference = "system" | "light" | "dark";
 

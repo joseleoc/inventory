@@ -41,7 +41,11 @@ export default function SettingsScreen() {
           {t("settings.subtitle")}
         </ThemedText>
 
-        <View style={[styles.userCard, { borderColor: colors.icon, backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.userCard,
+            { borderColor: colors.icon, backgroundColor: colors.background },
+          ]}>
           <ThemedText type="defaultSemiBold" selectable>
             {t("settings.userCard.title")}
           </ThemedText>
@@ -61,15 +65,6 @@ export default function SettingsScreen() {
             </ThemedText>
             <ThemedText style={styles.userValue} selectable>
               {user?.email?.trim() || t("settings.userCard.notAvailable")}
-            </ThemedText>
-          </View>
-
-          <View style={styles.userRow}>
-            <ThemedText style={[styles.userLabel, { color: colors.icon }]} selectable>
-              {t("settings.userCard.uid")}
-            </ThemedText>
-            <ThemedText style={styles.userValue} selectable>
-              {user?.uid || t("settings.userCard.notAvailable")}
             </ThemedText>
           </View>
         </View>

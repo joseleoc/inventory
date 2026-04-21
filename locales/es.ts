@@ -25,6 +25,9 @@ const es = {
     },
   },
   drawer: {
+    appName: "Inventory",
+    currentOrganization: "Organizacion actual",
+    noOrganization: "No hay organizacion seleccionada",
     home: "Inicio",
     addProduct: "Agregar producto",
     products: "Productos",
@@ -43,7 +46,6 @@ const es = {
       title: "Informacion del usuario",
       name: "Nombre",
       email: "Correo",
-      uid: "ID de usuario",
       notAvailable: "No disponible",
     },
     theme: {

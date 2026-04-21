@@ -7,16 +7,19 @@ import { Drawer } from "expo-router/drawer";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { NewCartFab } from "@/components/new-cart-fab";
+import { NewCartHeaderButton } from "@/components/new-cart-button";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { t } from "@/config/i18n";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useOrganizationStore } from "@/stores/organization-store";
+import { usePreferencesStore } from "@/stores/preferences-store";
 
 function CustomDrawerContent(props: DrawerContentComponentProps) {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
+  const activeOrganization = useOrganizationStore((state) => state.activeOrganization);
 
   const handleOpenSettings = () => {
     props.navigation.navigate("settings");
@@ -28,6 +31,26 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
         {...props}
         contentContainerStyle={styles.drawerContent}
         contentInsetAdjustmentBehavior="automatic">
+        <View
+          style={[
+            styles.headerCard,
+            { borderColor: colors.icon, backgroundColor: colors.background },
+          ]}>
+          <View style={[styles.appIdentity, { borderColor: colors.icon }]}>
+            <IconSymbol size={18} name="shippingbox.fill" color={colors.text} />
+            <ThemedText type="defaultSemiBold" style={styles.appName} selectable>
+              {t("drawer.appName")}
+            </ThemedText>
+          </View>
+
+          <ThemedText style={[styles.organizationLabel, { color: colors.icon }]} selectable>
+            {t("drawer.currentOrganization")}
+          </ThemedText>
+          <ThemedText type="defaultSemiBold" style={styles.organizationName} selectable>
+            {activeOrganization?.name?.trim() || t("drawer.noOrganization")}
+          </ThemedText>
+        </View>
+
         <DrawerItemList {...props} />
       </DrawerContentScrollView>
 
@@ -55,12 +78,19 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 }
 
 export default function TabLayout() {
+  const language = usePreferencesStore((state) => state.language);
+
   return (
     <View style={styles.layoutRoot}>
       <Drawer
+        key={language}
         drawerContent={(props) => <CustomDrawerContent {...props} />}
         screenOptions={{
           headerShown: true,
+          headerRight: () => <NewCartHeaderButton />,
+          headerRightContainerStyle: {
+            paddingRight: 10,
+          },
         }}>
         <Drawer.Screen
           name="index"
@@ -122,8 +152,6 @@ export default function TabLayout() {
           }}
         />
       </Drawer>
-
-      <NewCartFab />
     </View>
   );
 }
@@ -137,6 +165,36 @@ const styles = StyleSheet.create({
   },
   drawerContent: {
     paddingTop: 0,
+    gap: 12,
+  },
+  headerCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginHorizontal: 12,
+    marginTop: 8,
+    gap: 6,
+  },
+  appIdentity: {
+    alignSelf: "flex-start",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  appName: {
+    lineHeight: 20,
+  },
+  organizationLabel: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  organizationName: {
+    lineHeight: 22,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
