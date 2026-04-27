@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
 import "react-native-reanimated";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ThemedView } from "@/components/themed-view";
 import { setAppLanguage, t } from "@/config/i18n";
@@ -107,7 +108,9 @@ export default function RootLayout() {
     }
 
     if (user && inAuthGroup) {
-      router.replace(hasPendingInvitations || !activeOrganization ? "/(tabs)/organizations" : "/(tabs)");
+      router.replace(
+        hasPendingInvitations || !activeOrganization ? "/(tabs)/organizations" : "/(tabs)",
+      );
       return;
     }
 
@@ -134,28 +137,35 @@ export default function RootLayout() {
 
   if (isAppBootstrapping) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <ThemedView style={styles.centered}>
-            <ActivityIndicator size="large" />
-          </ThemedView>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </QueryClientProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <ThemedView style={styles.centered}>
+              <ActivityIndicator size="large" />
+            </ThemedView>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack key={language}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: "modal", title: t("modal.title") }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <Stack key={language}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: "modal", title: t("modal.title") }}
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
 
