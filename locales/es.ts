@@ -199,6 +199,8 @@ const es = {
       submit: "Guardar producto compuesto",
       success: "Producto compuesto creado correctamente.",
       errorUnable: "No se pudo crear el producto compuesto en este momento.",
+      partialRecipeSaveError:
+        '"%{name}" fue creado, pero no se pudo guardar su receta. Abre el producto e intentalo de nuevo.',
       removeIngredient: "Quitar",
       ingredientMeta: "SKU: %{sku} · Unidad: %{unit}",
       fields: {

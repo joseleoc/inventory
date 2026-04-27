@@ -80,6 +80,7 @@ export default function AddProductScreen() {
               orgId={activeOrganization.id}
               user={user}
               onSuccess={(name) => showToast(t("addProduct.productCreatedToast", { name }))}
+              onError={(message) => showToast(message, "error")}
             />
           )
         ) : null}

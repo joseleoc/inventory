@@ -1,15 +1,16 @@
 import { FirebaseError } from "firebase/app";
 import { type User } from "firebase/auth";
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    limit,
-    query,
-    runTransaction,
-    serverTimestamp,
-    where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  limit,
+  query,
+  runTransaction,
+  serverTimestamp,
+  where,
 } from "firebase/firestore";
 
 import { firebaseDb } from "@/config/firebase";
@@ -153,14 +154,6 @@ export async function upsertCompoundRecipe(input: UpsertCompoundRecipeInput, use
   try {
     const result = await runTransaction(firebaseDb, async (transaction) => {
       const recipeRef = doc(firebaseDb, "compound_product_recipes", compoundProductId);
-      const recipeSnapshot = await transaction.get(recipeRef);
-      const existingRecipe = recipeSnapshot.exists()
-        ? (recipeSnapshot.data() as CompoundRecipeDocument)
-        : null;
-
-      if (existingRecipe && existingRecipe.org_id !== orgId) {
-        throw new Error("Compound recipe belongs to a different organization.");
-      }
 
       const parentProductRef = doc(firebaseDb, "products", compoundProductId);
       const parentProductSnapshot = await transaction.get(parentProductRef);
@@ -187,34 +180,29 @@ export async function upsertCompoundRecipe(input: UpsertCompoundRecipeInput, use
         }
       }
 
-      const nextVersion = (existingRecipe?.version ?? 0) + 1;
-      const nextIsActive = input.isActive ?? existingRecipe?.is_active ?? true;
-
       const payload: Record<string, unknown> = {
         org_id: orgId,
         compound_product_id: compoundProductId,
         ingredients,
-        version: nextVersion,
-        is_active: nextIsActive,
-        created_by: existingRecipe?.created_by ?? user.uid,
+        version: increment(1),
+        ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
         updated_by: user.uid,
         updated_at: serverTimestamp(),
       };
-
-      if (!existingRecipe) {
-        payload.created_at = serverTimestamp();
-      }
 
       transaction.set(recipeRef, payload, { merge: true });
 
       return {
         recipeId: recipeRef.id,
-        version: nextVersion,
       };
     });
 
     return result;
   } catch (error) {
+    if (error instanceof FirebaseError) {
+      throw new Error(mapFirestoreError(error, "Unable to save compound recipe right now."));
+    }
+
     if (error instanceof Error) {
       throw error;
     }

@@ -196,6 +196,8 @@ const en = {
       submit: "Save Compound Product",
       success: "Compound product created successfully.",
       errorUnable: "Unable to create compound product right now.",
+      partialRecipeSaveError:
+        '"%{name}" was created, but its recipe could not be saved. Open the product and try again.',
       removeIngredient: "Remove",
       ingredientMeta: "SKU: %{sku} · Unit: %{unit}",
       fields: {

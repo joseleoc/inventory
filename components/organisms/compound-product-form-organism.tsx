@@ -5,13 +5,13 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { FormFieldErrorAtom } from "@/components/atoms/form-field-error-atom";
 import { BarcodeScannerInputMolecule } from "@/components/molecules/barcode-scanner-input-molecule";
 import {
-    CompoundIngredientItemMolecule,
-    type CompoundIngredientDraft,
+  CompoundIngredientItemMolecule,
+  type CompoundIngredientDraft,
 } from "@/components/molecules/compound-ingredient-item-molecule";
 import { LabeledInputFieldMolecule } from "@/components/molecules/labeled-input-field-molecule";
 import {
-    parseNonNegativeNumber,
-    parsePositiveInteger,
+  parseNonNegativeNumber,
+  parsePositiveInteger,
 } from "@/components/organisms/product-form-helpers";
 import { ProductSelector } from "@/components/product-selector";
 import { ThemedText } from "@/components/themed-text";
@@ -25,6 +25,7 @@ type CompoundProductFormOrganismProps = {
   user: User;
   disabled?: boolean;
   onSuccess?: (productName: string) => void;
+  onError?: (message: string) => void;
 };
 
 type CompoundFormState = {
@@ -59,6 +60,7 @@ export function CompoundProductFormOrganism({
   user,
   disabled,
   onSuccess,
+  onError,
 }: CompoundProductFormOrganismProps) {
   const [formState, setFormState] = useState<CompoundFormState>(INITIAL_STATE);
   const [ingredientDrafts, setIngredientDrafts] = useState<CompoundIngredientDraft[]>([]);
@@ -199,8 +201,10 @@ export function CompoundProductFormOrganism({
 
     setIsSubmitting(true);
 
+    let createdProductId: string | null = null;
+
     try {
-      const productId = await createProduct(
+      createdProductId = await createProduct(
         {
           sku,
           barcode: formState.barcode,
@@ -223,7 +227,7 @@ export function CompoundProductFormOrganism({
         user,
         input: {
           orgId,
-          compoundProductId: productId,
+          compoundProductId: createdProductId,
           isActive: true,
           ingredients: parsedIngredients.map((ingredient) => ({
             productId: ingredient.productId,
@@ -238,8 +242,19 @@ export function CompoundProductFormOrganism({
       setFormState(INITIAL_STATE);
       setIngredientDrafts([]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t("addProduct.compound.errorUnable");
+      const message =
+        createdProductId !== null
+          ? t("addProduct.compound.partialRecipeSaveError", { name })
+          : error instanceof Error
+            ? error.message
+            : t("addProduct.compound.errorUnable");
+
+      if (createdProductId !== null) {
+        clearSalesProductCache();
+      }
+
       setSubmitError(message);
+      onError?.(message);
     } finally {
       setIsSubmitting(false);
     }
