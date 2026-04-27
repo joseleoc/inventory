@@ -242,6 +242,7 @@ const en = {
     },
     submit: "Save Product",
     success: "Product added successfully.",
+    productCreatedToast: '"%{name}" created correctly',
     errorUnable: "Unable to add product right now.",
     validation: {
       skuRequired: "SKU is required.",

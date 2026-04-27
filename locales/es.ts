@@ -245,6 +245,7 @@ const es = {
     },
     submit: "Guardar producto",
     success: "Producto agregado correctamente.",
+    productCreatedToast: '"%{name}" creado correctamente',
     errorUnable: "No se pudo agregar el producto en este momento.",
     validation: {
       skuRequired: "El SKU es obligatorio.",

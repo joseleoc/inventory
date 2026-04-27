@@ -11,6 +11,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/stores/auth-store";
 import { useOrganizationStore } from "@/stores/organization-store";
 
@@ -20,6 +21,7 @@ export default function AddProductScreen() {
   const activeMembership = useOrganizationStore((state) => state.activeMembership);
 
   const [activeFormTab, setActiveFormTab] = useState<AddProductFormTab>("stock");
+  const { showToast, toastElement } = useToast({ position: "top" });
 
   const background = useThemeColor({}, "background");
   const muted = useMemo(() => "#7A7A7A", []);
@@ -68,12 +70,21 @@ export default function AddProductScreen() {
 
         {activeOrganization ? (
           activeFormTab === "stock" ? (
-            <StandardProductFormOrganism orgId={activeOrganization.id} user={user} />
+            <StandardProductFormOrganism
+              orgId={activeOrganization.id}
+              user={user}
+              onSuccess={(name) => showToast(t("addProduct.productCreatedToast", { name }))}
+            />
           ) : (
-            <CompoundProductFormOrganism orgId={activeOrganization.id} user={user} />
+            <CompoundProductFormOrganism
+              orgId={activeOrganization.id}
+              user={user}
+              onSuccess={(name) => showToast(t("addProduct.productCreatedToast", { name }))}
+            />
           )
         ) : null}
       </ScrollView>
+      {toastElement}
     </ThemedView>
   );
 }

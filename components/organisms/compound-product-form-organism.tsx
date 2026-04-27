@@ -24,6 +24,7 @@ type CompoundProductFormOrganismProps = {
   orgId: string;
   user: User;
   disabled?: boolean;
+  onSuccess?: (productName: string) => void;
 };
 
 type CompoundFormState = {
@@ -57,12 +58,12 @@ export function CompoundProductFormOrganism({
   orgId,
   user,
   disabled,
+  onSuccess,
 }: CompoundProductFormOrganismProps) {
   const [formState, setFormState] = useState<CompoundFormState>(INITIAL_STATE);
   const [ingredientDrafts, setIngredientDrafts] = useState<CompoundIngredientDraft[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const recipeMutation = useUpsertCompoundRecipeMutation();
@@ -191,7 +192,6 @@ export function CompoundProductFormOrganism({
 
     setErrors(nextErrors);
     setSubmitError(null);
-    setSubmitSuccess(null);
 
     if (Object.keys(nextErrors).length > 0 || salePrice === null) {
       return;
@@ -234,7 +234,7 @@ export function CompoundProductFormOrganism({
       });
 
       clearSalesProductCache();
-      setSubmitSuccess(t("addProduct.compound.success"));
+      onSuccess?.(name);
       setFormState(INITIAL_STATE);
       setIngredientDrafts([]);
     } catch (error) {
@@ -350,7 +350,6 @@ export function CompoundProductFormOrganism({
       </View>
 
       <FormFieldErrorAtom message={submitError ?? undefined} />
-      {submitSuccess ? <ThemedText style={styles.successText}>{submitSuccess}</ThemedText> : null}
 
       <Pressable
         onPress={handleSubmit}

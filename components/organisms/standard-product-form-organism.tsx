@@ -6,9 +6,9 @@ import { FormFieldErrorAtom } from "@/components/atoms/form-field-error-atom";
 import { BarcodeScannerInputMolecule } from "@/components/molecules/barcode-scanner-input-molecule";
 import { LabeledInputFieldMolecule } from "@/components/molecules/labeled-input-field-molecule";
 import {
-    isValidMeasurementUnit,
-    parseInteger,
-    parseNonNegativeNumber,
+  isValidMeasurementUnit,
+  parseInteger,
+  parseNonNegativeNumber,
 } from "@/components/organisms/product-form-helpers";
 import { ThemedText } from "@/components/themed-text";
 import { t } from "@/config/i18n";
@@ -19,6 +19,7 @@ type StandardProductFormOrganismProps = {
   orgId: string;
   user: User;
   disabled?: boolean;
+  onSuccess?: (productName: string) => void;
 };
 
 type FormState = {
@@ -128,12 +129,12 @@ export function StandardProductFormOrganism({
   orgId,
   user,
   disabled,
+  onSuccess,
 }: StandardProductFormOrganismProps) {
   const [formState, setFormState] = useState<FormState>(INITIAL_STATE);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const accentColor = useMemo(() => "#0a7ea4", []);
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
@@ -157,7 +158,6 @@ export function StandardProductFormOrganism({
     const { errors: nextErrors, parsed } = validateForm(formState);
     setErrors(nextErrors);
     setSubmitError(null);
-    setSubmitSuccess(null);
 
     if (!parsed) {
       return;
@@ -169,7 +169,7 @@ export function StandardProductFormOrganism({
       await createProduct(parsed, user, orgId);
       clearSalesProductCache();
 
-      setSubmitSuccess(t("addProduct.success"));
+      onSuccess?.(parsed.name);
       setFormState((current) => ({
         ...INITIAL_STATE,
         stockThreshold: current.stockThreshold,
@@ -306,7 +306,6 @@ export function StandardProductFormOrganism({
       </View>
 
       <FormFieldErrorAtom message={submitError ?? undefined} />
-      {submitSuccess ? <ThemedText style={styles.successText}>{submitSuccess}</ThemedText> : null}
 
       <Pressable
         onPress={handleSubmit}

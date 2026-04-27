@@ -19,7 +19,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.joseleoc.inventory"
     },
     "web": {
       "output": "static",
@@ -49,6 +54,12 @@
       "typedRoutes": true,
       "reactCompiler": true,
       "baseUrl": "/inventory"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ed45537e-7a10-4d65-b2f8-51fecd6efc9c"
+      }
     }
   }
 }

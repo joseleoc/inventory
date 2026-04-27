@@ -34,6 +34,42 @@ service cloud.firestore {
              : null;
     }
 
+    function requestOrgMembershipRole() {
+      return signedIn()
+             && request.resource.data.org_id is string
+             && exists(
+                  /databases/$(database)/documents/organization_members/
+                  $(request.resource.data.org_id + "_" + request.auth.uid)
+                )
+             && get(
+                  /databases/$(database)/documents/organization_members/
+                  $(request.resource.data.org_id + "_" + request.auth.uid)
+                ).data.status == 'active'
+             ? get(
+                  /databases/$(database)/documents/organization_members/
+                  $(request.resource.data.org_id + "_" + request.auth.uid)
+                ).data.role
+             : null;
+    }
+
+    function resourceOrgMembershipRole() {
+      return signedIn()
+             && resource.data.org_id is string
+             && exists(
+                  /databases/$(database)/documents/organization_members/
+                  $(resource.data.org_id + "_" + request.auth.uid)
+                )
+             && get(
+                  /databases/$(database)/documents/organization_members/
+                  $(resource.data.org_id + "_" + request.auth.uid)
+                ).data.status == 'active'
+             ? get(
+                  /databases/$(database)/documents/organization_members/
+                  $(resource.data.org_id + "_" + request.auth.uid)
+                ).data.role
+             : null;
+    }
+
     function sameOrgFromResource() {
       return signedIn() && (
                resource.data.org_id == orgId()
@@ -57,11 +93,28 @@ service cloud.firestore {
     }
 
     function isManager() {
-      return role() in ['manager', 'admin'];
+      return role() in ['manager', 'admin']
+             || profileRole() in ['manager', 'admin'];
     }
 
     function isAdmin() {
       return role() == 'admin' || profileRole() == 'admin';
+    }
+
+    function isResourceOrgViewer() {
+      return resourceOrgMembershipRole() in ['viewer', 'member', 'cashier', 'manager', 'admin', 'owner'];
+    }
+
+    function isRequestOrgCashier() {
+      return requestOrgMembershipRole() in ['cashier', 'manager', 'admin', 'owner'];
+    }
+
+    function isResourceOrgCashier() {
+      return resourceOrgMembershipRole() in ['cashier', 'manager', 'admin', 'owner'];
+    }
+
+    function isRequestOrgManager() {
+      return requestOrgMembershipRole() in ['manager', 'admin', 'owner'];
     }
 
     function immutableOnUpdate(field) {
@@ -156,19 +209,19 @@ service cloud.firestore {
 
     // PRODUCTS
     match /products/{productId} {
-      allow read: if sameOrgFromResource() && isViewer();
-      allow create: if sameOrgFromRequest() && isManager();
+      allow read: if sameOrgFromResource() && (isViewer() || isResourceOrgViewer());
+      allow create: if sameOrgFromRequest() && (isManager() || isRequestOrgManager());
       allow update: if sameOrgFromResource()
                     && sameOrgFromRequest()
                     && (
                       (
-                        isManager()
+                        (isManager() || isRequestOrgManager())
                         && immutableOnUpdate('created_at')
                         && immutableOnUpdate('created_by')
                       )
                       ||
                       (
-                        isCashier()
+                        (isCashier() || isRequestOrgCashier())
                         && cashierStockMutationOnly()
                       )
                     );
@@ -186,9 +239,9 @@ service cloud.firestore {
 
     // COMPOUND_PRODUCT_RECIPES
     match /compound_product_recipes/{recipeId} {
-      allow read: if sameOrgFromResource() && isViewer();
+      allow read: if sameOrgFromResource() && (isViewer() || isResourceOrgViewer());
       allow create, update: if sameOrgFromRequest()
-                            && isManager()
+                            && (isManager() || isRequestOrgManager())
                             && request.resource.data.updated_by == request.auth.uid;
       allow delete: if sameOrgFromResource() && isAdmin();
     }
@@ -206,18 +259,18 @@ service cloud.firestore {
 
     // RESTOCK_LOGS (append-only)
     match /restock_logs/{restockId} {
-      allow read: if sameOrgFromResource() && isCashier();
+      allow read: if sameOrgFromResource() && (isCashier() || isResourceOrgCashier());
       allow create: if sameOrgFromRequest()
-                    && isManager()
+                    && (isManager() || isRequestOrgManager())
                     && request.resource.data.restocked_by == request.auth.uid;
       allow update, delete: if false;
     }
 
     // PRODUCT_CHANGE_LOGS (append-only)
     match /product_change_logs/{logId} {
-      allow read: if sameOrgFromResource() && isCashier();
+      allow read: if sameOrgFromResource() && (isCashier() || isResourceOrgCashier());
       allow create: if sameOrgFromRequest()
-                    && isManager()
+                    && (isManager() || isRequestOrgManager())
                     && request.resource.data.changed_by == request.auth.uid
                     && request.resource.data.event_type in ['created', 'updated', 'stock_added'];
       allow update, delete: if false;
