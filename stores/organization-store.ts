@@ -2,16 +2,18 @@ import { type User } from "firebase/auth";
 import { create } from "zustand";
 
 import {
-    loadOrganizationContext,
-    switchActiveOrganization,
-    type OrganizationMembershipSummary,
-    type OrganizationSummary,
+  loadOrganizationContext,
+  switchActiveOrganization,
+  type OrganizationMembershipSummary,
+  type OrganizationSummary,
+  type PendingOrganizationInvitationSummary,
 } from "@/services/organizations";
 
 type OrganizationState = {
   activeOrganization: OrganizationSummary | null;
   activeMembership: OrganizationMembershipSummary | null;
   memberships: OrganizationMembershipSummary[];
+  pendingInvitations: PendingOrganizationInvitationSummary[];
   isInitializing: boolean;
   organizationError: string | null;
   initializeOrganizationContext: (user: User) => Promise<void>;
@@ -23,6 +25,7 @@ const INITIAL_STATE = {
   activeOrganization: null,
   activeMembership: null,
   memberships: [],
+  pendingInvitations: [],
   isInitializing: false,
   organizationError: null,
 };
@@ -38,6 +41,7 @@ export const useOrganizationStore = create<OrganizationState>((set) => ({
         activeOrganization: context.activeOrganization,
         activeMembership: context.activeMembership,
         memberships: context.memberships,
+        pendingInvitations: context.pendingInvitations,
         isInitializing: false,
       });
     } catch (error) {
@@ -58,6 +62,7 @@ export const useOrganizationStore = create<OrganizationState>((set) => ({
         activeOrganization: context.activeOrganization,
         activeMembership: context.activeMembership,
         memberships: context.memberships,
+        pendingInvitations: context.pendingInvitations,
         isInitializing: false,
       });
     } catch (error) {

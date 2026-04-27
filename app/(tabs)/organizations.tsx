@@ -12,10 +12,12 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { t } from "@/config/i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useToast } from "@/hooks/use-toast";
 import {
-  ORGANIZATION_ROLE_OPTIONS,
+  acceptOrganizationInvitation,
   assignUserToOrganization,
   createOrganization,
+  rejectOrganizationInvitation,
   type OrganizationRole,
 } from "@/services/organizations";
 import { useAuthStore } from "@/stores/auth-store";
@@ -29,7 +31,6 @@ type OrganizationFormState = {
 type AssignmentFormState = {
   email: string;
   organizationId: string;
-  role: Exclude<OrganizationRole, "owner">;
 };
 
 type OrganizationErrors = Partial<Record<keyof OrganizationFormState, string>>;
@@ -43,10 +44,7 @@ const INITIAL_ORGANIZATION_STATE: OrganizationFormState = {
 const INITIAL_ASSIGNMENT_STATE: AssignmentFormState = {
   email: "",
   organizationId: "",
-  role: "manager",
 };
-
-const ASSIGNABLE_ROLES = ORGANIZATION_ROLE_OPTIONS.filter((role) => role !== "owner");
 
 function normalizeOptionalText(value: string) {
   const normalized = value.trim();
@@ -101,6 +99,7 @@ export default function OrganizationsScreen() {
   const activeMembership = useOrganizationStore((state) => state.activeMembership);
   const activeOrganization = useOrganizationStore((state) => state.activeOrganization);
   const memberships = useOrganizationStore((state) => state.memberships);
+  const pendingInvitations = useOrganizationStore((state) => state.pendingInvitations);
   const initializeOrganizationContext = useOrganizationStore(
     (state) => state.initializeOrganizationContext,
   );
@@ -113,8 +112,10 @@ export default function OrganizationsScreen() {
   const [assignmentErrors, setAssignmentErrors] = useState<AssignmentErrors>({});
   const [isCreating, setIsCreating] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [processingInvitationId, setProcessingInvitationId] = useState<string | null>(null);
   const [screenMessage, setScreenMessage] = useState<string | null>(null);
   const [screenError, setScreenError] = useState<string | null>(null);
+  const { showToast, toastElement } = useToast({ position: "top" });
 
   const background = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -215,6 +216,10 @@ export default function OrganizationsScreen() {
     setScreenMessage(null);
 
     if (Object.keys(nextErrors).length > 0) {
+      const firstError = Object.values(nextErrors).find((value) => typeof value === "string");
+      if (firstError) {
+        showToast(firstError, "error");
+      }
       return;
     }
 
@@ -225,23 +230,68 @@ export default function OrganizationsScreen() {
         {
           organizationId: assignmentForm.organizationId,
           email: assignmentForm.email,
-          role: assignmentForm.role,
         },
         user,
       );
 
       setAssignmentForm((current) => ({ ...current, email: "" }));
-      setScreenMessage(
-        result.mode === "membership"
-          ? t("organizations.messages.assigned", { organizationName: result.organizationName })
-          : t("organizations.messages.invited", { organizationName: result.organizationName }),
+      showToast(
+        t("organizations.messages.invited", { organizationName: result.organizationName }),
+        "success",
       );
     } catch (error) {
-      setScreenError(
-        error instanceof Error ? error.message : t("organizations.messages.assignError"),
-      );
+      const message =
+        error instanceof Error ? error.message : t("organizations.messages.assignError");
+      setScreenError(message);
+      showToast(message, "error");
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (invitationId: string, organizationName: string) => {
+    if (!user || processingInvitationId) {
+      return;
+    }
+
+    setProcessingInvitationId(invitationId);
+    setScreenError(null);
+    setScreenMessage(null);
+
+    try {
+      await acceptOrganizationInvitation(invitationId, user);
+      await initializeOrganizationContext(user);
+      showToast(t("organizations.messages.invitationAccepted", { organizationName }), "success");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("organizations.messages.invitationActionError");
+      setScreenError(message);
+      showToast(message, "error");
+    } finally {
+      setProcessingInvitationId(null);
+    }
+  };
+
+  const handleRejectInvitation = async (invitationId: string, organizationName: string) => {
+    if (!user || processingInvitationId) {
+      return;
+    }
+
+    setProcessingInvitationId(invitationId);
+    setScreenError(null);
+    setScreenMessage(null);
+
+    try {
+      await rejectOrganizationInvitation(invitationId, user);
+      await initializeOrganizationContext(user);
+      showToast(t("organizations.messages.invitationRejected", { organizationName }), "success");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("organizations.messages.invitationActionError");
+      setScreenError(message);
+      showToast(message, "error");
+    } finally {
+      setProcessingInvitationId(null);
     }
   };
 
@@ -311,6 +361,89 @@ export default function OrganizationsScreen() {
             <ThemedText style={styles.successText}>{screenMessage}</ThemedText>
           </View>
         ) : null}
+
+        <View
+          style={[
+            styles.section,
+            styles.sectionCard,
+            { backgroundColor: sectionBackground, borderColor },
+          ]}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            {t("organizations.pendingInvitesTitle")}
+          </ThemedText>
+
+          {pendingInvitations.length === 0 ? (
+            <View style={[styles.emptyCard, { backgroundColor: inputBackground, borderColor }]}>
+              <ThemedText selectable>{t("organizations.pendingInvitesEmpty")}</ThemedText>
+            </View>
+          ) : (
+            <View style={styles.membershipList}>
+              {pendingInvitations.map((invitation) => {
+                const isProcessing = processingInvitationId === invitation.id;
+
+                return (
+                  <View
+                    key={invitation.id}
+                    style={[
+                      styles.membershipCard,
+                      { backgroundColor: inputBackground, borderColor },
+                    ]}>
+                    <ThemedText type="defaultSemiBold" selectable>
+                      {invitation.orgName}
+                    </ThemedText>
+                    <ThemedText selectable style={[styles.cardMetaText, { color: muted }]}>
+                      {t("organizations.invitesExpires", {
+                        date: invitation.expiresAt?.toLocaleDateString() ?? t("common.unknown"),
+                      })}
+                    </ThemedText>
+
+                    <View style={styles.inviteActionRow}>
+                      <Pressable
+                        onPress={() =>
+                          void handleRejectInvitation(invitation.id, invitation.orgName)
+                        }
+                        disabled={isProcessing}
+                        style={({ pressed }) => [
+                          styles.inviteActionButton,
+                          styles.inviteRejectButton,
+                          {
+                            borderColor: dangerColor,
+                            opacity: pressed || isProcessing ? 0.82 : 1,
+                          },
+                        ]}>
+                        <ThemedText style={[styles.inviteActionText, { color: dangerColor }]}>
+                          {t("organizations.buttons.rejectInvite")}
+                        </ThemedText>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() =>
+                          void handleAcceptInvitation(invitation.id, invitation.orgName)
+                        }
+                        disabled={isProcessing}
+                        style={({ pressed }) => [
+                          styles.inviteActionButton,
+                          {
+                            backgroundColor: accentColor,
+                            borderColor: accentColor,
+                            opacity: pressed || isProcessing ? 0.82 : 1,
+                          },
+                        ]}>
+                        {isProcessing ? (
+                          <ActivityIndicator color="#ffffff" />
+                        ) : (
+                          <ThemedText style={styles.inviteAcceptText}>
+                            {t("organizations.buttons.acceptInvite")}
+                          </ThemedText>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
         <View
           style={[
@@ -483,31 +616,6 @@ export default function OrganizationsScreen() {
           />
           <FieldError message={assignmentErrors.email} />
 
-          <FieldLabel label={t("organizations.fields.role")} />
-          <View style={styles.roleRow}>
-            {ASSIGNABLE_ROLES.map((role) => {
-              const selected = assignmentForm.role === role;
-              return (
-                <Pressable
-                  key={role}
-                  onPress={() => setAssignmentForm((current) => ({ ...current, role }))}
-                  style={({ pressed }) => [
-                    styles.roleChip,
-                    {
-                      backgroundColor: selected ? accentColor : inputBackground,
-                      borderColor: selected ? accentColor : borderColor,
-                      opacity: pressed ? 0.84 : 1,
-                    },
-                  ]}>
-                  <ThemedText
-                    style={[styles.roleChipText, { color: selected ? "#ffffff" : textColor }]}>
-                    {formatRoleLabel(role)}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
-
           <Pressable
             onPress={handleAssignUser}
             disabled={isAssigning || memberships.length === 0}
@@ -529,6 +637,7 @@ export default function OrganizationsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      {toastElement}
     </ThemedView>
   );
 }
@@ -611,21 +720,33 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
   },
-  roleRow: {
+  inviteActionRow: {
+    marginTop: 2,
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 10,
   },
-  roleChip: {
+  inviteActionButton: {
+    flex: 1,
+    minHeight: 42,
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
   },
-  roleChipText: {
+  inviteRejectButton: {
+    backgroundColor: "transparent",
+  },
+  inviteActionText: {
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: "600",
+    fontWeight: "700",
+  },
+  inviteAcceptText: {
+    color: "#ffffff",
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
   },
   primaryButton: {
     borderRadius: 14,

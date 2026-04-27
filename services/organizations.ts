@@ -5,10 +5,10 @@ import {
     doc,
     getDoc,
     getDocs,
-    limit,
     query,
     serverTimestamp,
     setDoc,
+  Timestamp,
     updateDoc,
     where,
     writeBatch,
@@ -21,6 +21,7 @@ export const ORGANIZATION_ROLE_OPTIONS = [
   "admin",
   "manager",
   "cashier",
+  "member",
   "viewer",
 ] as const;
 
@@ -35,7 +36,21 @@ export type OrganizationCreateInput = {
 export type OrganizationAssignmentInput = {
   organizationId: string;
   email: string;
-  role: Exclude<OrganizationRole, "owner">;
+};
+
+export type OrganizationInvitationStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "revoked"
+  | "expired";
+
+export type PendingOrganizationInvitationSummary = {
+  id: string;
+  orgId: string;
+  orgName: string;
+  email: string;
+  expiresAt: Date | null;
 };
 
 export type OrganizationSummary = {
@@ -60,6 +75,7 @@ export type OrganizationContext = {
   activeOrganization: OrganizationSummary | null;
   activeMembership: OrganizationMembershipSummary | null;
   memberships: OrganizationMembershipSummary[];
+  pendingInvitations: PendingOrganizationInvitationSummary[];
 };
 
 type UserProfileDocument = {
@@ -85,9 +101,25 @@ type OrganizationMembershipDocument = {
   org_id: string;
   user_id: string;
   email: string;
+  email_lower?: string;
   role: OrganizationRole;
   status: MembershipStatus;
 };
+
+type OrganizationInvitationDocument = {
+  org_id: string;
+  email: string;
+  email_lower: string;
+  role: OrganizationRole;
+  status: OrganizationInvitationStatus;
+  invited_by: string;
+  invited_user_id?: string;
+  expires_at?: Timestamp;
+  created_at?: Timestamp;
+};
+
+const INVITATION_EXPIRY_MONTHS = 1;
+const ACCEPTED_INVITATION_ROLE: OrganizationRole = "member";
 
 function normalizeOptionalText(value?: string) {
   const normalized = value?.trim();
@@ -96,6 +128,30 @@ function normalizeOptionalText(value?: string) {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function nextMonthDate(baseDate = new Date()) {
+  const next = new Date(baseDate);
+  next.setMonth(next.getMonth() + INVITATION_EXPIRY_MONTHS);
+  return next;
+}
+
+function timestampToDate(value: unknown) {
+  return value instanceof Timestamp ? value.toDate() : null;
+}
+
+function isInvitationExpired(invitation: OrganizationInvitationDocument, nowMs = Date.now()) {
+  const expiresAt = timestampToDate(invitation.expires_at);
+  if (expiresAt) {
+    return expiresAt.getTime() <= nowMs;
+  }
+
+  const createdAt = timestampToDate(invitation.created_at);
+  if (!createdAt) {
+    return false;
+  }
+
+  return nextMonthDate(createdAt).getTime() <= nowMs;
 }
 
 function toUserDisplayName(user: User) {
@@ -219,12 +275,82 @@ async function persistActiveOrganization(userId: string, orgId: string) {
   );
 }
 
+async function loadPendingOrganizationInvitations(user: User) {
+  const normalizedEmail = normalizeEmail(user.email ?? "");
+  if (!normalizedEmail) {
+    return [] as PendingOrganizationInvitationSummary[];
+  }
+
+  const invitationsQuery = query(
+    collection(firebaseDb, "organization_invitations"),
+    where("email_lower", "==", normalizedEmail),
+    where("status", "==", "pending"),
+  );
+
+  const snapshot = await getDocs(invitationsQuery);
+  if (snapshot.empty) {
+    return [] as PendingOrganizationInvitationSummary[];
+  }
+
+  const nowMs = Date.now();
+  const expiredIds: string[] = [];
+  const pendingRecords = snapshot.docs
+    .map((documentSnapshot) => ({
+      id: documentSnapshot.id,
+      ...(documentSnapshot.data() as OrganizationInvitationDocument),
+    }))
+    .filter((invitation) => {
+      if (isInvitationExpired(invitation, nowMs)) {
+        expiredIds.push(invitation.id);
+        return false;
+      }
+
+      return true;
+    });
+
+  if (expiredIds.length > 0) {
+    const expireBatch = writeBatch(firebaseDb);
+
+    for (const invitationId of expiredIds) {
+      expireBatch.update(doc(firebaseDb, "organization_invitations", invitationId), {
+        status: "expired",
+        responded_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+    }
+
+    await expireBatch.commit();
+  }
+
+  const organizations = await Promise.all(
+    pendingRecords.map((invitation) => getOrganizationById(invitation.org_id)),
+  );
+
+  return pendingRecords
+    .map((invitation, index) => {
+      const organization = organizations[index];
+      if (!organization) {
+        return null;
+      }
+
+      return {
+        id: invitation.id,
+        orgId: invitation.org_id,
+        orgName: organization.name,
+        email: invitation.email,
+        expiresAt: timestampToDate(invitation.expires_at),
+      } satisfies PendingOrganizationInvitationSummary;
+    })
+    .filter((invitation): invitation is PendingOrganizationInvitationSummary => invitation !== null);
+}
+
 export async function loadOrganizationContext(user: User): Promise<OrganizationContext> {
   await upsertUserProfile(user);
 
-  const [profile, memberships] = await Promise.all([
+  const [profile, memberships, pendingInvitations] = await Promise.all([
     getUserProfile(user.uid),
     loadMemberships(user.uid),
+    loadPendingOrganizationInvitations(user),
   ]);
 
   if (memberships.length === 0) {
@@ -232,6 +358,7 @@ export async function loadOrganizationContext(user: User): Promise<OrganizationC
       activeOrganization: null,
       activeMembership: null,
       memberships: [],
+      pendingInvitations,
     };
   }
 
@@ -254,6 +381,7 @@ export async function loadOrganizationContext(user: User): Promise<OrganizationC
     activeOrganization,
     activeMembership,
     memberships,
+    pendingInvitations,
   };
 }
 
@@ -301,6 +429,7 @@ export async function createOrganization(input: OrganizationCreateInput, user: U
     org_id: organizationRef.id,
     user_id: user.uid,
     email: normalizeEmail(user.email ?? ""),
+    email_lower: normalizeEmail(user.email ?? ""),
     role: "owner",
     status: "active",
     invited_by: user.uid,
@@ -349,79 +478,41 @@ export async function assignUserToOrganization(input: OrganizationAssignmentInpu
   if (!organization) {
     throw new Error("The selected organization was not found.");
   }
-
-  const usersQuery = query(
-    collection(firebaseDb, "users"),
-    where("email_lower", "==", email),
-    limit(1),
-  );
-  const usersSnapshot = await getDocs(usersQuery);
+  const invitationRef = doc(firebaseDb, "organization_invitations", `${organizationId}_${email}`);
+  const invitationSnapshot = await getDoc(invitationRef);
 
   try {
-    if (!usersSnapshot.empty) {
-      const existingUser = usersSnapshot.docs[0];
-      const targetUserId = existingUser.id;
-      const membershipRef = doc(
-        firebaseDb,
-        "organization_members",
-        `${organizationId}_${targetUserId}`,
-      );
-      const membershipSnapshot = await getDoc(membershipRef);
+    if (invitationSnapshot.exists()) {
+      const existingInvitation = invitationSnapshot.data() as OrganizationInvitationDocument;
 
-      if (membershipSnapshot.exists()) {
-        await updateDoc(membershipRef, {
-          email,
-          role: input.role,
-          status: "active",
-          updated_at: serverTimestamp(),
-        });
-      } else {
-        await setDoc(membershipRef, {
-          org_id: organizationId,
-          user_id: targetUserId,
-          email,
-          role: input.role,
-          status: "active",
-          invited_by: user.uid,
-          joined_at: serverTimestamp(),
-          created_at: serverTimestamp(),
+      if (existingInvitation.status === "pending" && !isInvitationExpired(existingInvitation)) {
+        throw new Error("A pending invitation already exists for this user in the organization.");
+      }
+
+      if (existingInvitation.status === "pending" && isInvitationExpired(existingInvitation)) {
+        await updateDoc(invitationRef, {
+          status: "expired",
+          responded_at: serverTimestamp(),
           updated_at: serverTimestamp(),
         });
       }
-
-      const existingProfile = existingUser.data() as UserProfileDocument;
-      if (!existingProfile.primary_org_id || !existingProfile.active_org_id) {
-        await setDoc(
-          doc(firebaseDb, "users", targetUserId),
-          {
-            primary_org_id: existingProfile.primary_org_id ?? organizationId,
-            active_org_id: existingProfile.active_org_id ?? organizationId,
-            updated_at: serverTimestamp(),
-          },
-          { merge: true },
-        );
-      }
-
-      return {
-        mode: "membership" as const,
-        organizationName: organization.name,
-      };
     }
 
-    const invitationRef = doc(firebaseDb, "organization_invitations", `${organizationId}_${email}`);
     await setDoc(
       invitationRef,
       {
         org_id: organizationId,
         email,
         email_lower: email,
-        role: input.role,
+        role: ACCEPTED_INVITATION_ROLE,
         status: "pending",
         invited_by: user.uid,
+        invited_user_id: null,
+        expires_at: Timestamp.fromDate(nextMonthDate()),
+        responded_at: null,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       },
-      { merge: true },
     );
 
     return {
@@ -430,5 +521,142 @@ export async function assignUserToOrganization(input: OrganizationAssignmentInpu
     };
   } catch (error) {
     throw new Error(mapFirestoreError(error, "Unable to assign user to organization right now."));
+  }
+}
+
+export async function acceptOrganizationInvitation(invitationId: string, user: User) {
+  const normalizedInvitationId = invitationId.trim();
+  if (!normalizedInvitationId) {
+    throw new Error("Invitation id is required.");
+  }
+
+  const normalizedEmail = normalizeEmail(user.email ?? "");
+  if (!normalizedEmail) {
+    throw new Error("Your account does not have a valid email address.");
+  }
+
+  const invitationRef = doc(firebaseDb, "organization_invitations", normalizedInvitationId);
+  const invitationSnapshot = await getDoc(invitationRef);
+
+  if (!invitationSnapshot.exists()) {
+    throw new Error("Invitation not found.");
+  }
+
+  const invitation = invitationSnapshot.data() as OrganizationInvitationDocument;
+
+  if (invitation.email_lower !== normalizedEmail) {
+    throw new Error("You do not have access to this invitation.");
+  }
+
+  if (invitation.status !== "pending") {
+    throw new Error("This invitation is no longer pending.");
+  }
+
+  if (isInvitationExpired(invitation)) {
+    await updateDoc(invitationRef, {
+      status: "expired",
+      responded_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+    throw new Error("This invitation has expired.");
+  }
+
+  const organization = await getOrganizationById(invitation.org_id);
+  if (!organization) {
+    throw new Error("The invitation organization no longer exists.");
+  }
+
+  const profile = await getUserProfile(user.uid);
+  const membershipRef = doc(firebaseDb, "organization_members", `${invitation.org_id}_${user.uid}`);
+  const membershipSnapshot = await getDoc(membershipRef);
+  const batch = writeBatch(firebaseDb);
+
+  if (!membershipSnapshot.exists()) {
+    batch.set(membershipRef, {
+      org_id: invitation.org_id,
+      user_id: user.uid,
+      email: normalizedEmail,
+      email_lower: normalizedEmail,
+      role: ACCEPTED_INVITATION_ROLE,
+      status: "active",
+      invited_by: invitation.invited_by,
+      joined_at: serverTimestamp(),
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+  }
+
+  batch.set(
+    doc(firebaseDb, "users", user.uid),
+    {
+      primary_org_id: profile?.primary_org_id ?? invitation.org_id,
+      active_org_id: invitation.org_id,
+      updated_at: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  batch.update(invitationRef, {
+    status: "accepted",
+    invited_user_id: user.uid,
+    responded_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+
+  try {
+    await batch.commit();
+    return loadOrganizationContext(user);
+  } catch (error) {
+    throw new Error(mapFirestoreError(error, "Unable to accept invitation right now."));
+  }
+}
+
+export async function rejectOrganizationInvitation(invitationId: string, user: User) {
+  const normalizedInvitationId = invitationId.trim();
+  if (!normalizedInvitationId) {
+    throw new Error("Invitation id is required.");
+  }
+
+  const normalizedEmail = normalizeEmail(user.email ?? "");
+  if (!normalizedEmail) {
+    throw new Error("Your account does not have a valid email address.");
+  }
+
+  const invitationRef = doc(firebaseDb, "organization_invitations", normalizedInvitationId);
+  const invitationSnapshot = await getDoc(invitationRef);
+
+  if (!invitationSnapshot.exists()) {
+    throw new Error("Invitation not found.");
+  }
+
+  const invitation = invitationSnapshot.data() as OrganizationInvitationDocument;
+
+  if (invitation.email_lower !== normalizedEmail) {
+    throw new Error("You do not have access to this invitation.");
+  }
+
+  if (invitation.status !== "pending") {
+    throw new Error("This invitation is no longer pending.");
+  }
+
+  if (isInvitationExpired(invitation)) {
+    await updateDoc(invitationRef, {
+      status: "expired",
+      responded_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+    throw new Error("This invitation has expired.");
+  }
+
+  try {
+    await updateDoc(invitationRef, {
+      status: "rejected",
+      invited_user_id: user.uid,
+      responded_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+    return loadOrganizationContext(user);
+  } catch (error) {
+    throw new Error(mapFirestoreError(error, "Unable to reject invitation right now."));
   }
 }

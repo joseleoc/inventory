@@ -43,9 +43,11 @@ export default function RootLayout() {
   const clearOrganizationContext = useOrganizationStore((state) => state.clearOrganizationContext);
   const isOrganizationInitializing = useOrganizationStore((state) => state.isInitializing);
   const activeOrganization = useOrganizationStore((state) => state.activeOrganization);
+  const pendingInvitations = useOrganizationStore((state) => state.pendingInvitations);
   const language = usePreferencesStore((state) => state.language);
   const isPreferencesHydrated = usePreferencesStore((state) => state.isHydrated);
   const hydratePreferences = usePreferencesStore((state) => state.hydratePreferences);
+  const hasPendingInvitations = pendingInvitations.length > 0;
   const isAppBootstrapping =
     !fontsLoaded ||
     !isPreferencesHydrated ||
@@ -105,15 +107,21 @@ export default function RootLayout() {
     }
 
     if (user && inAuthGroup) {
-      router.replace(activeOrganization ? "/(tabs)" : "/(tabs)/organizations");
+      router.replace(hasPendingInvitations || !activeOrganization ? "/(tabs)/organizations" : "/(tabs)");
       return;
     }
 
-    if (user && !inAuthGroup && !activeOrganization && secondSegment !== "organizations") {
+    if (
+      user &&
+      !inAuthGroup &&
+      (hasPendingInvitations || !activeOrganization) &&
+      secondSegment !== "organizations"
+    ) {
       router.replace("/(tabs)/organizations");
     }
   }, [
     activeOrganization,
+    hasPendingInvitations,
     isAppBootstrapping,
     isInitializing,
     isPreferencesHydrated,
