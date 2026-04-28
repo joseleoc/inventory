@@ -2,13 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Camera, CameraView } from "expo-camera";
 import { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { KeyboardAvoidingViewAtom } from "@/components/atoms/keyboard-avoiding-view-atom";
 import { ProductSelector } from "@/components/product-selector";
@@ -255,384 +249,378 @@ export default function SalesScreen() {
       <KeyboardAvoidingViewAtom
         style={styles.keyboardAvoiding}
         scrollViewProps={{ contentContainerStyle: styles.content }}>
-          <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="title" style={styles.title}>
-              {t("sales.title")}
-            </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: muted }]}>
-              {t("sales.subtitle")}
-            </ThemedText>
-            <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
-              {activeOrganization
-                ? t("common.activeOrgWithRole", {
-                    name: activeOrganization.name,
-                    role: activeMembership?.role ?? t("common.member"),
-                  })
-                : t("common.noActiveOrgSelected")}
-            </ThemedText>
+        <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
+          <ThemedText type="title" style={styles.title}>
+            {t("sales.title")}
+          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: muted }]}>{t("sales.subtitle")}</ThemedText>
+          <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
+            {activeOrganization
+              ? t("common.activeOrgWithRole", {
+                  name: activeOrganization.name,
+                  role: activeMembership?.role ?? t("common.member"),
+                })
+              : t("common.noActiveOrgSelected")}
+          </ThemedText>
+        </View>
+
+        {!activeOrganization ? (
+          <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
+            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
+            <ThemedText selectable>{t("sales.noActiveOrganization")}</ThemedText>
+          </View>
+        ) : null}
+
+        {screenError ? (
+          <ThemedText style={[styles.feedbackText, { color: dangerColor }]}>
+            {screenError}
+          </ThemedText>
+        ) : null}
+        {screenMessage ? (
+          <ThemedText style={[styles.feedbackText, { color: successColor }]}>
+            {screenMessage}
+          </ThemedText>
+        ) : null}
+
+        <View style={[styles.section, { marginTop: 10 }]}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            {t("sales.cartsTitle")}
+          </ThemedText>
+
+          <View style={styles.cartActionsRow}>
+            <Pressable
+              onPress={() => {
+                const cartNumber = carts.length + archivedCarts.length + 1;
+                createCart(t("newCartFab.clientName", { number: cartNumber }));
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("sales.newCart")}
+              style={({ pressed }) => [
+                styles.newCartButton,
+                {
+                  borderColor,
+                  backgroundColor: accentSoftBackground,
+                  opacity: pressed ? 0.82 : 1,
+                },
+              ]}>
+              <IconSymbol name="plus.circle.fill" size={16} color={accentColor} />
+              <ThemedText type="defaultSemiBold">{t("sales.newCart")}</ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={clearActiveCart}
+              disabled={!activeCart || activeCart.lines.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel={t("sales.clearCart")}
+              style={({ pressed }) => [
+                styles.newCartButton,
+                {
+                  borderColor,
+                  backgroundColor: inputBackground,
+                  opacity: pressed || !activeCart || activeCart.lines.length === 0 ? 0.65 : 1,
+                },
+              ]}>
+              <MaterialIcons name="cleaning-services" size={16} color={muted} />
+              <ThemedText type="defaultSemiBold">{t("sales.clearCart")}</ThemedText>
+            </Pressable>
           </View>
 
-          {!activeOrganization ? (
-            <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-              <ThemedText type="defaultSemiBold">
-                {t("common.organizationRequiredTitle")}
-              </ThemedText>
-              <ThemedText selectable>{t("sales.noActiveOrganization")}</ThemedText>
-            </View>
-          ) : null}
+          <View style={styles.cartGrid}>
+            {carts.map((cart) => {
+              const selected = cart.id === activeCartId;
 
-          {screenError ? (
-            <ThemedText style={[styles.feedbackText, { color: dangerColor }]}>
-              {screenError}
-            </ThemedText>
-          ) : null}
-          {screenMessage ? (
-            <ThemedText style={[styles.feedbackText, { color: successColor }]}>
-              {screenMessage}
-            </ThemedText>
-          ) : null}
-
-          <View style={[styles.section, { marginTop: 10 }]}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              {t("sales.cartsTitle")}
-            </ThemedText>
-
-            <View style={styles.cartActionsRow}>
-              <Pressable
-                onPress={() => {
-                  const cartNumber = carts.length + archivedCarts.length + 1;
-                  createCart(t("newCartFab.clientName", { number: cartNumber }));
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={t("sales.newCart")}
-                style={({ pressed }) => [
-                  styles.newCartButton,
-                  {
-                    borderColor,
-                    backgroundColor: accentSoftBackground,
-                    opacity: pressed ? 0.82 : 1,
-                  },
-                ]}>
-                <IconSymbol name="plus.circle.fill" size={16} color={accentColor} />
-                <ThemedText type="defaultSemiBold">{t("sales.newCart")}</ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={clearActiveCart}
-                disabled={!activeCart || activeCart.lines.length === 0}
-                accessibilityRole="button"
-                accessibilityLabel={t("sales.clearCart")}
-                style={({ pressed }) => [
-                  styles.newCartButton,
-                  {
-                    borderColor,
-                    backgroundColor: inputBackground,
-                    opacity: pressed || !activeCart || activeCart.lines.length === 0 ? 0.65 : 1,
-                  },
-                ]}>
-                <MaterialIcons name="cleaning-services" size={16} color={muted} />
-                <ThemedText type="defaultSemiBold">{t("sales.clearCart")}</ThemedText>
-              </Pressable>
-            </View>
-
-            <View style={styles.cartGrid}>
-              {carts.map((cart) => {
-                const selected = cart.id === activeCartId;
-
-                return (
-                  <View key={cart.id} style={styles.cartTileCard}>
-                    <Pressable
-                      onPress={() => switchActiveCart(cart.id)}
-                      accessibilityRole="button"
-                      accessibilityLabel={cart.clientLabel}
+              return (
+                <View key={cart.id} style={styles.cartTileCard}>
+                  <Pressable
+                    onPress={() => switchActiveCart(cart.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={cart.clientLabel}
+                    style={[
+                      styles.cartTileButton,
+                      {
+                        borderColor: selected ? accentColor : borderColor,
+                        backgroundColor: selected ? accentSoftBackground : inputBackground,
+                      },
+                    ]}>
+                    <View
                       style={[
-                        styles.cartTileButton,
+                        styles.cartTileIconWrap,
+                        { backgroundColor: selected ? accentColor : borderColor },
+                      ]}>
+                      <IconSymbol
+                        name="cart.fill"
+                        size={16}
+                        color={selected ? "#ffffff" : textColor}
+                      />
+                    </View>
+
+                    <ThemedText
+                      style={[styles.cartTileCount, { color: selected ? accentColor : muted }]}
+                      selectable>
+                      {cart.lines.length}
+                    </ThemedText>
+                  </Pressable>
+
+                  <View style={styles.cartTileFooter}>
+                    <ThemedText
+                      numberOfLines={1}
+                      selectable
+                      style={[styles.cartTileLabel, { color: textColor }]}>
+                      {cart.clientLabel}
+                    </ThemedText>
+
+                    <Pressable
+                      onPress={() => deleteCart(cart.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("sales.deleteCartA11y", { label: cart.clientLabel })}
+                      style={({ pressed }) => [
+                        styles.deleteCartIconButton,
                         {
-                          borderColor: selected ? accentColor : borderColor,
-                          backgroundColor: selected ? accentSoftBackground : inputBackground,
+                          borderColor,
+                          backgroundColor: inputBackground,
+                          opacity: pressed ? 0.8 : 1,
                         },
                       ]}>
-                      <View
-                        style={[
-                          styles.cartTileIconWrap,
-                          { backgroundColor: selected ? accentColor : borderColor },
-                        ]}>
-                        <IconSymbol
-                          name="cart.fill"
-                          size={16}
-                          color={selected ? "#ffffff" : textColor}
-                        />
-                      </View>
-
-                      <ThemedText
-                        style={[styles.cartTileCount, { color: selected ? accentColor : muted }]}
-                        selectable>
-                        {cart.lines.length}
-                      </ThemedText>
+                      <MaterialIcons name="delete-outline" size={14} color={dangerColor} />
                     </Pressable>
-
-                    <View style={styles.cartTileFooter}>
-                      <ThemedText
-                        numberOfLines={1}
-                        selectable
-                        style={[styles.cartTileLabel, { color: textColor }]}>
-                        {cart.clientLabel}
-                      </ThemedText>
-
-                      <Pressable
-                        onPress={() => deleteCart(cart.id)}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("sales.deleteCartA11y", { label: cart.clientLabel })}
-                        style={({ pressed }) => [
-                          styles.deleteCartIconButton,
-                          {
-                            borderColor,
-                            backgroundColor: inputBackground,
-                            opacity: pressed ? 0.8 : 1,
-                          },
-                        ]}>
-                        <MaterialIcons name="delete-outline" size={14} color={dangerColor} />
-                      </Pressable>
-                    </View>
                   </View>
-                );
-              })}
-            </View>
+                </View>
+              );
+            })}
           </View>
+        </View>
 
-          <View
-            style={[
-              styles.section,
-              styles.selectorSpotlight,
-              { backgroundColor: accentSoftBackground, borderColor: accentColor },
-            ]}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              {t("sales.lookupTitle")}
-            </ThemedText>
-            <ThemedText style={[styles.selectorSubtitle, { color: muted }]}>
-              {t("productSelector.defaultLabel")}
-            </ThemedText>
+        <View
+          style={[
+            styles.section,
+            styles.selectorSpotlight,
+            { backgroundColor: accentSoftBackground, borderColor: accentColor },
+          ]}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            {t("sales.lookupTitle")}
+          </ThemedText>
+          <ThemedText style={[styles.selectorSubtitle, { color: muted }]}>
+            {t("productSelector.defaultLabel")}
+          </ThemedText>
 
-            <ProductSelector
-              organizationId={activeOrganizationId}
-              query={searchTerm}
-              onQueryChange={setSearchTerm}
-              onSelectProduct={handleAddProduct}
-              refreshToken={searchRefreshToken}
-              actionLabel={t("sales.selectorAction")}
-              actionDisabled={!activeOrganization}
-              inputAccessory={
-                <Pressable
-                  onPress={() => void handleScannerOpen()}
-                  disabled={!activeOrganization}
-                  style={({ pressed }) => [
-                    styles.scanButton,
-                    {
-                      borderColor: accentColor,
-                      backgroundColor: accentColor,
-                      opacity: pressed || !activeOrganization ? 0.82 : 1,
-                    },
-                  ]}>
-                  <View style={styles.scanButtonContent}>
-                    <MaterialIcons name="qr-code-scanner" size={18} color="#ffffff" />
-                    <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-                      {t("sales.scanButton")}
-                    </ThemedText>
-                  </View>
-                </Pressable>
-              }
-            />
-
-            {isScannerVisible ? (
-              <View style={[styles.scannerWrap, { borderColor }]}>
-                <CameraView
-                  onBarcodeScanned={(result: { data: string }) =>
-                    void handleScannedCode(result.data)
-                  }
-                  style={styles.scanner}
-                  facing="back"
-                />
-                <Pressable
-                  onPress={() => setIsScannerVisible(false)}
-                  style={({ pressed }) => [
-                    styles.closeScannerButton,
-                    { backgroundColor: accentColor, opacity: pressed ? 0.82 : 1 },
-                  ]}>
-                  <ThemedText style={styles.buttonText}>{t("sales.closeScanner")}</ThemedText>
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.section}>
-            {activeCart ? (
-              <>
-                <FieldLabel label={t("sales.activeCartLabel")} />
-                <TextInput
-                  value={activeCart.clientLabel}
-                  onChangeText={renameActiveCart}
-                  placeholder={t("sales.activeCartPlaceholder")}
-                  placeholderTextColor={muted}
-                  style={[
-                    styles.input,
-                    { color: textColor, backgroundColor: inputBackground, borderColor },
-                  ]}
-                />
-
-                {activeCart.lines.length === 0 ? (
-                  <View
-                    style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-                    <ThemedText selectable>{t("sales.cartEmpty")}</ThemedText>
-                  </View>
-                ) : (
-                  <View style={styles.linesWrap}>
-                    {activeCart.lines.map((line) => {
-                      const isLowStock = line.currentStockSnapshot <= line.stockThreshold;
-
-                      return (
-                        <View
-                          key={line.productId}
-                          style={[
-                            styles.lineCard,
-                            { backgroundColor: inputBackground, borderColor },
-                          ]}>
-                          <View style={styles.lineMeta}>
-                            <ThemedText type="defaultSemiBold" selectable>
-                              {line.name}
-                            </ThemedText>
-                            <ThemedText selectable style={{ color: muted }}>
-                              {t("sales.lineSkuAndPrice", {
-                                sku: line.sku,
-                                price: line.unitPrice.toFixed(2),
-                              })}
-                            </ThemedText>
-                            <ThemedText
-                              selectable
-                              style={{ color: isLowStock ? dangerColor : muted }}>
-                              {t("sales.lineStockSnapshot", {
-                                stock: line.currentStockSnapshot,
-                                low: isLowStock ? t("sales.lowStockSuffix") : "",
-                              })}
-                            </ThemedText>
-                          </View>
-
-                          <View style={styles.lineActions}>
-                            <Pressable
-                              onPress={() => {
-                                const result = decrementLineItem(line.productId);
-                                if (!result.ok && result.message) {
-                                  pushActionMessage(result.message, true);
-                                }
-                              }}
-                              style={({ pressed }) => [
-                                styles.quantityButton,
-                                {
-                                  borderColor,
-                                  backgroundColor: inputBackground,
-                                  opacity: pressed ? 0.82 : 1,
-                                },
-                              ]}>
-                              <ThemedText type="defaultSemiBold">-</ThemedText>
-                            </Pressable>
-
-                            <TextInput
-                              value={String(line.quantity)}
-                              onChangeText={(value) => {
-                                const normalized = value.replace(/[^0-9]/g, "");
-                                if (!normalized) {
-                                  return;
-                                }
-
-                                const nextQuantity = Number.parseInt(normalized, 10);
-                                const result = setLineItemQuantity(line.productId, nextQuantity);
-                                if (!result.ok && result.message) {
-                                  pushActionMessage(result.message, true);
-                                }
-                              }}
-                              keyboardType="number-pad"
-                              style={[
-                                styles.quantityInput,
-                                {
-                                  color: textColor,
-                                  backgroundColor: inputBackground,
-                                  borderColor,
-                                },
-                              ]}
-                            />
-
-                            <Pressable
-                              onPress={() => {
-                                const result = incrementLineItem(line.productId);
-                                if (!result.ok && result.message) {
-                                  pushActionMessage(result.message, true);
-                                }
-                              }}
-                              style={({ pressed }) => [
-                                styles.quantityButton,
-                                {
-                                  borderColor,
-                                  backgroundColor: inputBackground,
-                                  opacity: pressed ? 0.82 : 1,
-                                },
-                              ]}>
-                              <ThemedText type="defaultSemiBold">+</ThemedText>
-                            </Pressable>
-
-                            <Pressable
-                              onPress={() => removeLineItem(line.productId)}
-                              style={({ pressed }) => [
-                                styles.removeButton,
-                                {
-                                  borderColor,
-                                  backgroundColor: inputBackground,
-                                  opacity: pressed ? 0.82 : 1,
-                                },
-                              ]}>
-                              <ThemedText type="defaultSemiBold">{t("sales.remove")}</ThemedText>
-                            </Pressable>
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-              </>
-            ) : null}
-
-            <View style={[styles.checkoutCard, { backgroundColor: inputBackground, borderColor }]}>
-              <ThemedText type="defaultSemiBold" selectable>
-                {t("sales.totals", { items: totalItems, total: totalAmount.toFixed(2) })}
-              </ThemedText>
-
+          <ProductSelector
+            organizationId={activeOrganizationId}
+            query={searchTerm}
+            onQueryChange={setSearchTerm}
+            onSelectProduct={handleAddProduct}
+            refreshToken={searchRefreshToken}
+            actionLabel={t("sales.selectorAction")}
+            actionDisabled={!activeOrganization}
+            inputAccessory={
               <Pressable
-                onPress={() => void handleCheckout()}
-                disabled={
-                  !activeOrganization ||
-                  !activeCart ||
-                  activeCart.lines.length === 0 ||
-                  checkoutMutation.isPending
-                }
+                onPress={() => void handleScannerOpen()}
+                disabled={!activeOrganization}
                 style={({ pressed }) => [
-                  styles.checkoutButton,
+                  styles.scanButton,
                   {
+                    borderColor: accentColor,
                     backgroundColor: accentColor,
-                    opacity:
-                      pressed ||
-                      !activeOrganization ||
-                      !activeCart ||
-                      activeCart.lines.length === 0 ||
-                      checkoutMutation.isPending
-                        ? 0.72
-                        : 1,
+                    opacity: pressed || !activeOrganization ? 0.82 : 1,
                   },
                 ]}>
-                {checkoutMutation.isPending ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <ThemedText style={styles.buttonText}>{t("sales.checkout")}</ThemedText>
-                )}
+                <View style={styles.scanButtonContent}>
+                  <MaterialIcons name="qr-code-scanner" size={18} color="#ffffff" />
+                  <ThemedText type="defaultSemiBold" style={styles.buttonText}>
+                    {t("sales.scanButton")}
+                  </ThemedText>
+                </View>
+              </Pressable>
+            }
+          />
+
+          {isScannerVisible ? (
+            <View style={[styles.scannerWrap, { borderColor }]}>
+              <CameraView
+                onBarcodeScanned={(result: { data: string }) => void handleScannedCode(result.data)}
+                style={styles.scanner}
+                facing="back"
+              />
+              <Pressable
+                onPress={() => setIsScannerVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeScannerButton,
+                  { backgroundColor: accentColor, opacity: pressed ? 0.82 : 1 },
+                ]}>
+                <ThemedText style={styles.buttonText}>{t("sales.closeScanner")}</ThemedText>
               </Pressable>
             </View>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          {activeCart ? (
+            <>
+              <FieldLabel label={t("sales.activeCartLabel")} />
+              <TextInput
+                value={activeCart.clientLabel}
+                onChangeText={renameActiveCart}
+                placeholder={t("sales.activeCartPlaceholder")}
+                placeholderTextColor={muted}
+                style={[
+                  styles.input,
+                  { color: textColor, backgroundColor: inputBackground, borderColor },
+                ]}
+              />
+
+              {activeCart.lines.length === 0 ? (
+                <View
+                  style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
+                  <ThemedText selectable>{t("sales.cartEmpty")}</ThemedText>
+                </View>
+              ) : (
+                <View style={styles.linesWrap}>
+                  {activeCart.lines.map((line) => {
+                    const isLowStock = line.currentStockSnapshot <= line.stockThreshold;
+
+                    return (
+                      <View
+                        key={line.productId}
+                        style={[
+                          styles.lineCard,
+                          { backgroundColor: inputBackground, borderColor },
+                        ]}>
+                        <View style={styles.lineMeta}>
+                          <ThemedText type="defaultSemiBold" selectable>
+                            {line.name}
+                          </ThemedText>
+                          <ThemedText selectable style={{ color: muted }}>
+                            {t("sales.lineSkuAndPrice", {
+                              sku: line.sku,
+                              price: line.unitPrice.toFixed(2),
+                            })}
+                          </ThemedText>
+                          <ThemedText
+                            selectable
+                            style={{ color: isLowStock ? dangerColor : muted }}>
+                            {t("sales.lineStockSnapshot", {
+                              stock: line.currentStockSnapshot,
+                              low: isLowStock ? t("sales.lowStockSuffix") : "",
+                            })}
+                          </ThemedText>
+                        </View>
+
+                        <View style={styles.lineActions}>
+                          <Pressable
+                            onPress={() => {
+                              const result = decrementLineItem(line.productId);
+                              if (!result.ok && result.message) {
+                                pushActionMessage(result.message, true);
+                              }
+                            }}
+                            style={({ pressed }) => [
+                              styles.quantityButton,
+                              {
+                                borderColor,
+                                backgroundColor: inputBackground,
+                                opacity: pressed ? 0.82 : 1,
+                              },
+                            ]}>
+                            <ThemedText type="defaultSemiBold">-</ThemedText>
+                          </Pressable>
+
+                          <TextInput
+                            value={String(line.quantity)}
+                            onChangeText={(value) => {
+                              const normalized = value.replace(/[^0-9]/g, "");
+                              if (!normalized) {
+                                return;
+                              }
+
+                              const nextQuantity = Number.parseInt(normalized, 10);
+                              const result = setLineItemQuantity(line.productId, nextQuantity);
+                              if (!result.ok && result.message) {
+                                pushActionMessage(result.message, true);
+                              }
+                            }}
+                            keyboardType="number-pad"
+                            style={[
+                              styles.quantityInput,
+                              {
+                                color: textColor,
+                                backgroundColor: inputBackground,
+                                borderColor,
+                              },
+                            ]}
+                          />
+
+                          <Pressable
+                            onPress={() => {
+                              const result = incrementLineItem(line.productId);
+                              if (!result.ok && result.message) {
+                                pushActionMessage(result.message, true);
+                              }
+                            }}
+                            style={({ pressed }) => [
+                              styles.quantityButton,
+                              {
+                                borderColor,
+                                backgroundColor: inputBackground,
+                                opacity: pressed ? 0.82 : 1,
+                              },
+                            ]}>
+                            <ThemedText type="defaultSemiBold">+</ThemedText>
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => removeLineItem(line.productId)}
+                            style={({ pressed }) => [
+                              styles.removeButton,
+                              {
+                                borderColor,
+                                backgroundColor: inputBackground,
+                                opacity: pressed ? 0.82 : 1,
+                              },
+                            ]}>
+                            <ThemedText type="defaultSemiBold">{t("sales.remove")}</ThemedText>
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          ) : null}
+
+          <View style={[styles.checkoutCard, { backgroundColor: inputBackground, borderColor }]}>
+            <ThemedText type="defaultSemiBold" selectable>
+              {t("sales.totals", { items: totalItems, total: totalAmount.toFixed(2) })}
+            </ThemedText>
+
+            <Pressable
+              onPress={() => void handleCheckout()}
+              disabled={
+                !activeOrganization ||
+                !activeCart ||
+                activeCart.lines.length === 0 ||
+                checkoutMutation.isPending
+              }
+              style={({ pressed }) => [
+                styles.checkoutButton,
+                {
+                  backgroundColor: accentColor,
+                  opacity:
+                    pressed ||
+                    !activeOrganization ||
+                    !activeCart ||
+                    activeCart.lines.length === 0 ||
+                    checkoutMutation.isPending
+                      ? 0.72
+                      : 1,
+                },
+              ]}>
+              {checkoutMutation.isPending ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <ThemedText style={styles.buttonText}>{t("sales.checkout")}</ThemedText>
+              )}
+            </Pressable>
           </View>
+        </View>
       </KeyboardAvoidingViewAtom>
 
       {toastElement}

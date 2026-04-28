@@ -81,72 +81,68 @@ export default function ProductDetailsScreen() {
       <KeyboardAvoidingViewAtom
         style={styles.keyboardAvoiding}
         scrollViewProps={{ contentContainerStyle: styles.content }}>
-          <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="title" style={styles.title}>
-              {t("productDetails.title")}
-            </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: muted }]}>
-              {t("productDetails.subtitle")}
-            </ThemedText>
-            <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
-              {t("productDetails.productId", {
-                id: normalizedProductId || t("common.unknown"),
-              })}
-            </ThemedText>
+        <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
+          <ThemedText type="title" style={styles.title}>
+            {t("productDetails.title")}
+          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: muted }]}>
+            {t("productDetails.subtitle")}
+          </ThemedText>
+          <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
+            {t("productDetails.productId", {
+              id: normalizedProductId || t("common.unknown"),
+            })}
+          </ThemedText>
+        </View>
+
+        {!activeOrganization ? (
+          <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
+            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
+            <ThemedText selectable>{t("productDetails.noActiveOrganization")}</ThemedText>
           </View>
+        ) : null}
 
-          {!activeOrganization ? (
-            <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-              <ThemedText type="defaultSemiBold">
-                {t("common.organizationRequiredTitle")}
-              </ThemedText>
-              <ThemedText selectable>{t("productDetails.noActiveOrganization")}</ThemedText>
-            </View>
-          ) : null}
+        {screenError ? (
+          <ThemedText style={[styles.errorText, { color: dangerColor }]}>{screenError}</ThemedText>
+        ) : null}
 
-          {screenError ? (
-            <ThemedText style={[styles.errorText, { color: dangerColor }]}>
-              {screenError}
-            </ThemedText>
-          ) : null}
+        {isLoading ? (
+          <View style={styles.centeredSection}>
+            <ActivityIndicator size="large" />
+          </View>
+        ) : null}
 
-          {isLoading ? (
-            <View style={styles.centeredSection}>
-              <ActivityIndicator size="large" />
-            </View>
-          ) : null}
+        {!isLoading && product && activeOrganization ? (
+          <View style={styles.formStack}>
+            {product.itemType === "stock" ? (
+              <ProductRestockFormOrganism
+                productId={product.id}
+                orgId={activeOrganization.id}
+                user={user}
+                showToast={showToast}
+                onRestocked={loadProduct}
+              />
+            ) : null}
 
-          {!isLoading && product && activeOrganization ? (
-            <View style={styles.formStack}>
-              {product.itemType === "stock" ? (
-                <ProductRestockFormOrganism
-                  productId={product.id}
-                  orgId={activeOrganization.id}
-                  user={user}
-                  showToast={showToast}
-                  onRestocked={loadProduct}
-                />
-              ) : null}
-
-              {product.itemType === "compound" ? (
-                <CompoundProductDetailsFormOrganism
-                  product={product}
-                  orgId={activeOrganization.id}
-                  user={user}
-                  showToast={showToast}
-                  onSaved={loadProduct}
-                />
-              ) : (
-                <StandardProductDetailsFormOrganism
-                  product={product}
-                  orgId={activeOrganization.id}
-                  user={user}
-                  showToast={showToast}
-                  onSaved={loadProduct}
-                />
-              )}
-            </View>
-          ) : null}
+            {product.itemType === "compound" ? (
+              <CompoundProductDetailsFormOrganism
+                product={product}
+                orgId={activeOrganization.id}
+                user={user}
+                showToast={showToast}
+                onSaved={loadProduct}
+              />
+            ) : (
+              <StandardProductDetailsFormOrganism
+                product={product}
+                orgId={activeOrganization.id}
+                user={user}
+                showToast={showToast}
+                onSaved={loadProduct}
+              />
+            )}
+          </View>
+        ) : null}
       </KeyboardAvoidingViewAtom>
 
       {toastElement}
