@@ -1,7 +1,8 @@
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
+import { KeyboardAvoidingViewAtom } from "@/components/atoms/keyboard-avoiding-view-atom";
 import { CompoundProductDetailsFormOrganism } from "@/components/organisms/compound-product-details-form-organism";
 import { ProductRestockFormOrganism } from "@/components/organisms/product-restock-form-organism";
 import { StandardProductDetailsFormOrganism } from "@/components/organisms/standard-product-details-form-organism";
@@ -77,70 +78,76 @@ export default function ProductDetailsScreen() {
 
   return (
     <ThemedView style={styles.page}>
-      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
-        <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
-          <ThemedText type="title" style={styles.title}>
-            {t("productDetails.title")}
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: muted }]}>
-            {t("productDetails.subtitle")}
-          </ThemedText>
-          <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
-            {t("productDetails.productId", {
-              id: normalizedProductId || t("common.unknown"),
-            })}
-          </ThemedText>
-        </View>
-
-        {!activeOrganization ? (
-          <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
-            <ThemedText type="defaultSemiBold">{t("common.organizationRequiredTitle")}</ThemedText>
-            <ThemedText selectable>{t("productDetails.noActiveOrganization")}</ThemedText>
+      <KeyboardAvoidingViewAtom
+        style={styles.keyboardAvoiding}
+        scrollViewProps={{ contentContainerStyle: styles.content }}>
+          <View style={[styles.headerCard, { backgroundColor: inputBackground, borderColor }]}>
+            <ThemedText type="title" style={styles.title}>
+              {t("productDetails.title")}
+            </ThemedText>
+            <ThemedText style={[styles.subtitle, { color: muted }]}>
+              {t("productDetails.subtitle")}
+            </ThemedText>
+            <ThemedText selectable style={[styles.subtitle, { color: muted }]}>
+              {t("productDetails.productId", {
+                id: normalizedProductId || t("common.unknown"),
+              })}
+            </ThemedText>
           </View>
-        ) : null}
 
-        {screenError ? (
-          <ThemedText style={[styles.errorText, { color: dangerColor }]}>{screenError}</ThemedText>
-        ) : null}
+          {!activeOrganization ? (
+            <View style={[styles.noticeCard, { backgroundColor: inputBackground, borderColor }]}>
+              <ThemedText type="defaultSemiBold">
+                {t("common.organizationRequiredTitle")}
+              </ThemedText>
+              <ThemedText selectable>{t("productDetails.noActiveOrganization")}</ThemedText>
+            </View>
+          ) : null}
 
-        {isLoading ? (
-          <View style={styles.centeredSection}>
-            <ActivityIndicator size="large" />
-          </View>
-        ) : null}
+          {screenError ? (
+            <ThemedText style={[styles.errorText, { color: dangerColor }]}>
+              {screenError}
+            </ThemedText>
+          ) : null}
 
-        {!isLoading && product && activeOrganization ? (
-          <View style={styles.formStack}>
-            {product.itemType === "stock" ? (
-              <ProductRestockFormOrganism
-                productId={product.id}
-                orgId={activeOrganization.id}
-                user={user}
-                showToast={showToast}
-                onRestocked={loadProduct}
-              />
-            ) : null}
+          {isLoading ? (
+            <View style={styles.centeredSection}>
+              <ActivityIndicator size="large" />
+            </View>
+          ) : null}
 
-            {product.itemType === "compound" ? (
-              <CompoundProductDetailsFormOrganism
-                product={product}
-                orgId={activeOrganization.id}
-                user={user}
-                showToast={showToast}
-                onSaved={loadProduct}
-              />
-            ) : (
-              <StandardProductDetailsFormOrganism
-                product={product}
-                orgId={activeOrganization.id}
-                user={user}
-                showToast={showToast}
-                onSaved={loadProduct}
-              />
-            )}
-          </View>
-        ) : null}
-      </ScrollView>
+          {!isLoading && product && activeOrganization ? (
+            <View style={styles.formStack}>
+              {product.itemType === "stock" ? (
+                <ProductRestockFormOrganism
+                  productId={product.id}
+                  orgId={activeOrganization.id}
+                  user={user}
+                  showToast={showToast}
+                  onRestocked={loadProduct}
+                />
+              ) : null}
+
+              {product.itemType === "compound" ? (
+                <CompoundProductDetailsFormOrganism
+                  product={product}
+                  orgId={activeOrganization.id}
+                  user={user}
+                  showToast={showToast}
+                  onSaved={loadProduct}
+                />
+              ) : (
+                <StandardProductDetailsFormOrganism
+                  product={product}
+                  orgId={activeOrganization.id}
+                  user={user}
+                  showToast={showToast}
+                  onSaved={loadProduct}
+                />
+              )}
+            </View>
+          ) : null}
+      </KeyboardAvoidingViewAtom>
 
       {toastElement}
     </ThemedView>
@@ -149,6 +156,9 @@ export default function ProductDetailsScreen() {
 
 const styles = StyleSheet.create({
   page: {
+    flex: 1,
+  },
+  keyboardAvoiding: {
     flex: 1,
   },
   centered: {
